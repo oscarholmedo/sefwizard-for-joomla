@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0.1
+/* SEF Wizard extension for Joomla 3.x - Version 1.0.2
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -583,7 +583,7 @@ class PlgSystemSefwizard extends JPlugin
 					$notice .= "\\n $name: $time sec.";
 				}	
 				$notice .= "\\n Total execution time: {$total} sec.";
-				return preg_replace("#(</head>)#", "<script>if('console' in window && console.log) console.log('$notice')</script> $1", $html);
+				return preg_replace("#</head>#i", "<script>if('console' in window && console.log) console.log('$notice')</script>$0", $html);
 			}
 			else
 			{
@@ -593,7 +593,7 @@ class PlgSystemSefwizard extends JPlugin
 					$notice .= "<br>$name: $time sec.";
 				}	
 				$notice .= "<br>total execution time: <b>{$total} sec.</b></div>";
-				return preg_replace("#<body[^>]*>#", "$0{$notice}", $html);
+				return preg_replace("#<body[^>]*>#is", "$0{$notice}", $html);
 			}
 		}
 		
