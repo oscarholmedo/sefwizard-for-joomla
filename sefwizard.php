@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0
+/* SEF Wizard extension for Joomla 3.x - Version 1.0.1
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -55,14 +55,25 @@ class PlgSystemSefwizard extends JPlugin
 			
 			$dbo = JFactory::getDbo();
 			
-			$uri = JURI::getInstance();
-			$path = preg_replace("#^(?:" . preg_quote(JURI::root(true), "#") . ")?(?:/index\.php[^/]*/)?#i", "", $uri->getPath());
+			$uri  = JURI::getInstance();
+			$path = $uri->getPath();
+			$len  = strlen(JURI::root(true));
+			
+			if(stripos($path, '/index.php/') === $len)
+			{
+				$len += 10;
+			}
+			
+			if($len)
+			{
+				$path = substr($path, $len);
+			}
 			
 			$fragments = explode("/", $path);
 			$fragments = array_filter($fragments);
 			$fragments = array_values($fragments);
 			
-			if(isset($fragments[0]) && !preg_match("#/\d+-#", $path))
+			if(isset($fragments[0]))
 			{
 				$base = $fragments[0];
 				$sefs = JLanguageHelper::getLanguages('sef');
@@ -322,7 +333,6 @@ class PlgSystemSefwizard extends JPlugin
 		$uri->setPath($this->_sef);
 	}
 	
-	public $_cache = array();
 	
 	PUBLIC FUNCTION build(&$siteRouter, &$uri)
 	{
@@ -358,7 +368,14 @@ class PlgSystemSefwizard extends JPlugin
 					$path = $fragment . substr($path, $len);
 				}
 				
-				$path = preg_replace("#/\d+-#", "/", $path);
+				$subpattern = preg_replace('#[^\d]*([\d]+).*#', '$1', $query["id"]);
+				
+				if(isset($query["catid"]))
+				{
+					$subpattern = '(?:' . $subpattern . '|' . preg_replace('#[^\d]*([\d]+).*#', '$1', $query["catid"]) . ')';
+				}
+				
+				$path = preg_replace("#/{$subpattern}-#", "/", $path);
 				
 				$uri->setPath($path);
 				$uri->setQuery($vars);
@@ -394,13 +411,16 @@ class PlgSystemSefwizard extends JPlugin
 				
 				if($canonical !== JURI::current())
 				{
-					if($param == 1 && !$uri->getQuery())
+					if($url !== JURI::root(true) . "/index.php")
 					{
-						$app->redirect($canonical, 301);
-					}
-					else if($url !== JURI::root(true) . "/index.php")
-					{
-						throw new Exception("Not found", 404);
+						if($param == 1 && !$uri->getQuery())
+						{
+							$app->redirect($canonical, 301);
+						}
+						else if( !( $option === "com_content" && $app->input->get("view") === "archive" ) )
+						{
+							throw new Exception("Not found", 404);
+						}
 					}
 				}
 				
@@ -573,7 +593,7 @@ class PlgSystemSefwizard extends JPlugin
 					$notice .= "<br>$name: $time sec.";
 				}	
 				$notice .= "<br>total execution time: <b>{$total} sec.</b></div>";
-				return preg_replace("#<body[^>]*>#", "$1{$notice}", $html);
+				return preg_replace("#<body[^>]*>#", "$0{$notice}", $html);
 			}
 		}
 		
