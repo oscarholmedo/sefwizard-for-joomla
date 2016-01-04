@@ -236,16 +236,16 @@ class PlgSystemSefwizard extends JPlugin
 						
 						if($category = $this->getItem($categories))
 						{
-							$continue = true;
+							$abort = false;
 							
 							if($catalias)
 							{
-								$continue = !array_filter($items, function($item) use ($catalias) {
+								$abort = array_filter($items, function($item) use ($catalias) {
 									return $item->alias === $catalias;
 								});
 							}
 
-							if($continue)
+							if(empty($abort))
 							{
 								$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
 							}
