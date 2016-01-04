@@ -236,71 +236,87 @@ class PlgSystemSefwizard extends JPlugin
 						
 						if($category = $this->getItem($categories))
 						{
-							$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
-						}
-						elseif($catalias)
-						{
-							$categories = array_filter($categories, function($category) use ($catalias) {
-								return $category->alias === $catalias;
-							});
+							$continue = true;
 							
-							$filtered = array();
-							
-							if($categories)
+							if($catalias)
 							{
-								foreach ($items as $item) {
-									foreach ($categories as $category) {
-										if (!$item->path && $item->catid === $category->id)
-										{
-											$item->path = $category->path;
-											$filtered[] = $item;
+								$continue = !array_filter($items, function($item) use ($catalias) {
+									return $item->alias === $catalias;
+								});
+							}
+
+							if($continue)
+							{
+								$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
+							}
+						}
+						
+						if(!$this->_sef)
+						{
+							if($catalias)
+							{
+								$categories = array_filter($categories, function($category) use ($catalias) {
+									return $category->alias === $catalias;
+								});
+								
+								$filtered = array();
+								
+								if($categories)
+								{
+									foreach ($items as $item) {
+										foreach ($categories as $category) {
+											if (!$item->path && $item->catid === $category->id)
+											{
+												$item->path = $category->path;
+												$filtered[] = $item;
+											}
 										}
 									}
 								}
+								else
+								{
+									foreach ($items as $item) {
+										$item->path = $catalias;
+										$filtered[] = $item;
+									}
+								}
+								
+								if($item = $this->getItem($filtered, true))
+								{
+									if($item->first_fragment)
+									{
+										$pattern = '#(./)?(' . preg_quote($item->first_fragment, '#') . ')/([^/]+)$#';
+										$replacement = '${1}' . $item->catid . "-$2/{$item->id}-$3";
+									}
+									else
+									{
+										$pattern = '#([^/]+)$#';
+										$replacement = $item->id . '-$1';
+									}
+									
+									$this->_sef = preg_replace($pattern, $replacement, $path);
+								}
+								
 							}
 							else
 							{
-								foreach ($items as $item) {
-									$item->path = $catalias;
-									$filtered[] = $item;
-								}
-							}
-							
-							if($item = $this->getItem($filtered, true))
-							{
-								if($item->first_fragment)
-								{
-									$pattern = '#(./)?(' . preg_quote($item->first_fragment, '#') . ')/([^/]+)$#';
-									$replacement = '${1}' . $item->catid . "-$2/{$item->id}-$3";
-								}
-								else
-								{
-									$pattern = '#([^/]+)$#';
-									$replacement = $item->id . '-$1';
-								}
+								$dbo->setQuery("
+									SELECT $name_link
+										FROM $table_menu
+											WHERE $name_language IN($val_language,$val_all)
+												AND $name_home = 1
+													AND ($subcond)
+								");			
 								
-								$this->_sef = preg_replace($pattern, $replacement, $path);
-							}
-							
-						}
-						else
-						{
-							$dbo->setQuery("
-								SELECT $name_link
-									FROM $table_menu
-										WHERE $name_language IN($val_language,$val_all)
-											AND $name_home = 1
-												AND ($subcond)
-							");			
-							
-							if($menu_items = $dbo->loadObjectList())
-							{
-								foreach ($menu_items as $menu_item) {
-									foreach ($items as $item) {
-										if(strpos($menu_item->link, "&id=" . $item->catid))
-										{
-											$this->_sef = preg_replace("#([^/]+$)#", $item->id . "-$1", $path);
-											break 2;
+								if($menu_items = $dbo->loadObjectList())
+								{
+									foreach ($menu_items as $menu_item) {
+										foreach ($items as $item) {
+											if(strpos($menu_item->link, "&id=" . $item->catid))
+											{
+												$this->_sef = preg_replace("#([^/]+$)#", $item->id . "-$1", $path);
+												break 2;
+											}
 										}
 									}
 								}
@@ -583,7 +599,7 @@ class PlgSystemSefwizard extends JPlugin
 					$notice .= "\\n $name: $time sec.";
 				}	
 				$notice .= "\\n Total execution time: {$total} sec.";
-				return preg_replace("#</head>#i", "<script>if('console' in window && console.log) console.log('$notice')</script>$0", $html);
+				return preg_replace("#(</head>)#", "<script>if('console' in window && console.log) console.log('$notice')</script> $1", $html);
 			}
 			else
 			{
@@ -593,7 +609,7 @@ class PlgSystemSefwizard extends JPlugin
 					$notice .= "<br>$name: $time sec.";
 				}	
 				$notice .= "<br>total execution time: <b>{$total} sec.</b></div>";
-				return preg_replace("#<body[^>]*>#is", "$0{$notice}", $html);
+				return preg_replace("#<body[^>]*>#", "$0{$notice}", $html);
 			}
 		}
 		
