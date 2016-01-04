@@ -234,18 +234,18 @@ class PlgSystemSefwizard extends JPlugin
 							}
 						}
 						
-						if($category = $this->getItem($categories))
+						$skip_categories = false;
+						
+						if($catalias)
 						{
-							$abort = false;
-							
-							if($catalias)
-							{
-								$abort = array_filter($items, function($item) use ($catalias) {
-									return $item->alias === $catalias;
-								});
-							}
-
-							if(empty($abort))
+							$skip_categories = array_filter($items, function($item) use ($catalias) {
+								return $item->alias === $catalias;
+							});
+						}
+						
+						if(empty($skip_categories))
+						{
+							if($category = $this->getItem($categories))
 							{
 								$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
 							}
