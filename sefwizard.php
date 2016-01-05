@@ -234,18 +234,20 @@ class PlgSystemSefwizard extends JPlugin
 							}
 						}
 						
-						$skip_categories = false;
-						
-						if($catalias)
+						if($category = $this->getItem($categories))
 						{
-							$skip_categories = array_filter($items, function($item) use ($catalias) {
-								return $item->alias === $catalias;
-							});
-						}
-						
-						if(empty($skip_categories))
-						{
-							if($category = $this->getItem($categories))
+							$skip_categories = false;
+							
+							if($catalias)
+							{
+								$skip_categories = array_filter($items, function($item) use ($catalias, $category, $path)
+								{
+									return $item->alias === $catalias && 
+										$this->strend($path, $category->path . '/' . $item->alias);
+								});
+							}
+							
+							if(empty($skip_categories))
 							{
 								$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
 							}
@@ -571,6 +573,13 @@ class PlgSystemSefwizard extends JPlugin
 				return $item;
 			}
 		}
+	}
+	
+	
+	PRIVATE FUNCTION strend($haystack, $needle)
+	{
+		$offset = strlen($haystack) - strlen($needle);	
+		return $offset >= 0 && strpos($haystack, $needle, $offset) !== false;
 	}
 	
 	
