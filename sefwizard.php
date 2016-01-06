@@ -248,7 +248,7 @@ class PlgSystemSefwizard extends JPlugin
 							}
 						}
 						
-						if($category = $this->getCategory($items, $categories, $catalias))
+						if($category = $this->getCategory($items, $categories, $catalias, $subcond))
 						{
 							$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
 						}
@@ -280,7 +280,7 @@ class PlgSystemSefwizard extends JPlugin
 								}
 							}
 							
-							if($item = $this->getCategory($items, $filtered, $catalias, true))
+							if($item = $this->getCategory($items, $filtered, $catalias, $subcond, true))
 							{
 								if($item->first_fragment)
 								{
@@ -402,9 +402,9 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PUBLIC FUNCTION onAfterRoute()
 	{
-		$param = $this->params->get('duplicate_handling');
+		$duplicate_handling = $this->params->get('duplicate_handling');
 		
-		if($this->_execute && $param)
+		if($this->_execute && $duplicate_handling)
 		{	
 			$app = JFactory::getApplication();
 			$option = $app->input->get("option");
@@ -426,7 +426,7 @@ class PlgSystemSefwizard extends JPlugin
 				{
 					if($url !== JURI::root(true) . "/index.php")
 					{
-						if($param == 1 && !$uri->getQuery())
+						if($duplicate_handling == 1 && !$uri->getQuery())
 						{
 							$app->redirect($canonical, 301);
 						}
@@ -470,7 +470,7 @@ class PlgSystemSefwizard extends JPlugin
 	}
 	
 	
-	PRIVATE FUNCTION getCategory($items, $categories, $catalias, $skip_first = false)
+	PRIVATE FUNCTION getCategory($items, $categories, $catalias, $subcond, $skip_first = false)
 	{
 		if(!empty($categories))
 		{
@@ -535,7 +535,6 @@ class PlgSystemSefwizard extends JPlugin
 					$val_all = $dbo->quote('*');
 					$val_lang = $dbo->quote($this->_language);
 					$val_computed_menu_path = $dbo->quote($computed_menu_path);
-					$val_is_category = $dbo->quote('index.php?option=com_content&view=category%');
 					
 					$table_menu = $dbo->quoteName('#__menu');
 					
@@ -546,9 +545,7 @@ class PlgSystemSefwizard extends JPlugin
 						AND $name_published = 1
 						AND (
 							$name_path = $val_computed_menu_path
-							OR (
-								$name_home = 1 AND $name_link LIKE $val_is_category
-							)
+							OR ($name_home = 1 AND ($subcond))
 						)
 						ORDER BY $name_home
 					");
