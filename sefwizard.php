@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0.1
+/* SEF Wizard extension for Joomla 3.x - Version 1.0.2
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -114,11 +114,13 @@ class PlgSystemSefwizard extends JPlugin
 					$name_catid = $dbo->quoteName('catid');
 					$name_alias = $dbo->quoteName('alias');
 					$name_path = $dbo->quoteName('path');
-					$name_catpath = $dbo->quoteName('path');
+					$name_level = $dbo->quoteName('level');
 					$name_language = $dbo->quoteName('language');
 					$name_link = $dbo->quoteName('link');
 					$name_home = $dbo->quoteName('home');
 					$name_extension = $dbo->quoteName('extension');
+					$name_published = $dbo->quoteName('published');
+					$name_state = $dbo->quoteName('state');
 					
 					$table_menu = $dbo->quoteName('#__menu');
 					$table_content = $dbo->quoteName('#__content');
@@ -139,9 +141,11 @@ class PlgSystemSefwizard extends JPlugin
 										$name_language, 
 										$name_alias, 
 										$name_catid, 
-										null AS $name_catpath, 
-										null AS $name_extension
-								FROM $table_content
+										null AS $name_path, 
+										null AS $name_level, 
+										null AS $name_extension, 
+										$name_state AS $name_published 
+								FROM $table_content 
 								WHERE $name_alias = $val_alias";
 						
 						$subcond = "$name_link LIKE " . $dbo->quote('index.php?option=com_content&view=category%');
@@ -158,9 +162,11 @@ class PlgSystemSefwizard extends JPlugin
 										$name_language, 
 										$name_alias, 
 										$name_catid, 
-										null AS $name_catpath, 
-										null AS $name_extension
-									FROM $table_contact_details
+										null AS $name_path, 
+										null AS $name_level, 
+										null AS $name_extension, 
+										$name_published 
+									FROM $table_contact_details 
 									WHERE $name_alias = $val_alias";
 						
 						$subcond .= $subcond ? ' OR ' : '';
@@ -175,9 +181,11 @@ class PlgSystemSefwizard extends JPlugin
 										$name_alias, 
 										null AS $name_catid, 
 										$name_path, 
-										$name_extension
-									FROM $table_categories
-									WHERE $name_extension IN($val_com_content,$val_com_contact)
+										$name_level, 
+										$name_extension, 
+										$name_published 
+									FROM $table_categories 
+									WHERE $name_extension IN($val_com_content,$val_com_contact) 
 									AND $name_alias = $val_alias";
 									
 						if ($catalias) {
@@ -197,24 +205,30 @@ class PlgSystemSefwizard extends JPlugin
 										$name_alias, 
 										null AS $name_catid, 
 										$name_path, 
-										$val_com_tags AS $name_extension
-									FROM $table_tags
+										null as $name_level, 
+										$val_com_tags AS $name_extension, 
+										$name_published
+									FROM $table_tags 
 									WHERE $name_alias = $val_alias";
 					}
 					
 					$dbo->setQuery("
 						SELECT 
-							$t1.$name_id, 
-							$t1.$name_alias, 
-							$t1.$name_catid, 
-							$t1.$name_catpath, 
-							$t1.$name_extension 
+							$t1.$name_id,
+							$t1.$name_alias,
+							$t1.$name_catid,
+							$t1.$name_path,
+							$t1.$name_level,
+							$t1.$name_extension, 
+							$t1.$name_published
 						FROM (
 							$subquery
 						) AS $t1
 						LEFT JOIN $table_menu AS $t2 ON $t2.$name_path = $val_path
-							WHERE $t2.$name_path IS null
+							WHERE ($t2.$name_path IS null OR $t2.$name_published <> 1)
 								AND $t1.$name_language IN($val_language,$val_all)
+									AND $t1.$name_published > 0
+						ORDER BY $name_level DESC
 					");
 					
 					if($list = $dbo->loadObjectList())
@@ -234,7 +248,7 @@ class PlgSystemSefwizard extends JPlugin
 							}
 						}
 						
-						if($category = $this->getItem($categories))
+						if($category = $this->getCategory($items, $categories, $catalias, $subcond))
 						{
 							$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
 						}
@@ -246,7 +260,7 @@ class PlgSystemSefwizard extends JPlugin
 							
 							$filtered = array();
 							
-							if($categories)
+							if(count($categories))
 							{
 								foreach ($items as $item) {
 									foreach ($categories as $category) {
@@ -266,7 +280,7 @@ class PlgSystemSefwizard extends JPlugin
 								}
 							}
 							
-							if($item = $this->getItem($filtered, true))
+							if($item = $this->getCategory($items, $filtered, $catalias, $subcond, true))
 							{
 								if($item->first_fragment)
 								{
@@ -281,7 +295,6 @@ class PlgSystemSefwizard extends JPlugin
 								
 								$this->_sef = preg_replace($pattern, $replacement, $path);
 							}
-							
 						}
 						else
 						{
@@ -342,7 +355,7 @@ class PlgSystemSefwizard extends JPlugin
 		{
 			$query = $uri->getQuery(true);
 			
-			if(isset($query["option"], $query["id"]) && in_array($query["option"], $this->_options))
+			if(isset($query["option"], $query["id"]) && in_array($query["option"], $this->_options) && !is_array($query["id"]))
 			{	
 				$router = clone $siteRouter;
 				$url = $router->build($uri);
@@ -389,9 +402,9 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PUBLIC FUNCTION onAfterRoute()
 	{
-		$param = $this->params->get('duplicate_handling');
+		$duplicate_handling = $this->params->get('duplicate_handling');
 		
-		if($this->_execute && $param)
+		if($this->_execute && $duplicate_handling)
 		{	
 			$app = JFactory::getApplication();
 			$option = $app->input->get("option");
@@ -399,7 +412,8 @@ class PlgSystemSefwizard extends JPlugin
 			if(in_array($option, $this->_options))
 			{
 				$vars = $this->_router->getVars();				
-				$url = preg_replace('#\?.*$#', '', JRoute::_('index.php?' . http_build_query($vars), false));
+				$url_parts = explode("?", JRoute::_('index.php?' . http_build_query($vars), false), 2);
+				$path = $url_parts[0];
 				
 				if($this->_debug)
 				{
@@ -407,20 +421,23 @@ class PlgSystemSefwizard extends JPlugin
 				}
 				
 				$uri = JURI::getInstance();
-				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $url;
+				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
 				
-				if($canonical !== JURI::current())
+				if($canonical !== JURI::current() && strcasecmp($path, JURI::root(true) . "/index.php") &&
+					($option !== "com_content" || $app->input->get("view") !== "archive"))
 				{
-					if($url !== JURI::root(true) . "/index.php")
+					if($duplicate_handling == 1 && 
+						(empty($url_parts[1]) || !preg_match("#\b(?:cat|Item)?id=#i", $url_parts[1])))
 					{
-						if($param == 1 && !$uri->getQuery())
+						if($query_string = $uri->getQuery())
 						{
-							$app->redirect($canonical, 301);
+							$canonical .= '?' . $query_string;
 						}
-						else if( !( $option === "com_content" && $app->input->get("view") === "archive" ) )
-						{
-							throw new Exception("Not found", 404);
-						}
+						$app->redirect($canonical, 301);
+					}
+					else
+					{
+						throw new Exception("Not found", 404);
 					}
 				}
 				
@@ -457,104 +474,180 @@ class PlgSystemSefwizard extends JPlugin
 	}
 	
 	
-	PRIVATE FUNCTION getItem($list, $skip_first = false)
+	PRIVATE FUNCTION getCategory($items, $categories, $catalias, $subcond, $skip_first = false)
 	{
-		if(!empty($list))
+		if(!empty($categories))
 		{
+			$category = null;
+			
 			$path_fragment = "";
 			$path_fragments = array();
-			$reversed_fragments = array_reverse($this->_fragments);
+			
+			$menu_fragments = $this->_fragments;
 			
 			if($skip_first)
 			{
-				array_shift($reversed_fragments);
+				array_pop($menu_fragments);
 			}
 			
-			foreach($reversed_fragments as $key => $fragment)
-			{	
-				$sorted = array_filter($list, function($item) use ($fragment, $path_fragment)
-				{
-					$needle = $fragment . $path_fragment;
-					$offset = strlen($item->path) - strlen($needle);
-					
-					return $offset >= 0 && strpos($item->path, $needle, $offset) !== false;
-				});
+			$menu_fragments_num = count($menu_fragments);
+			
+			for($i = $menu_fragments_num - 1; $i >= 0; $i--)
+			{
+				$filtered = array();
+				$fragment = $menu_fragments[$i];
 				
-				if(!count($sorted))
+				foreach($categories as $ctg)
+				{
+					if($this->strend($ctg->path, $fragment . $path_fragment))
+					{
+						$filtered[] = $ctg;
+					}
+				}
+				
+				array_unshift($path_fragments, array_pop($menu_fragments));
+				
+				if(!count($filtered))
 				{
 					break;
 				}
 				
-				$reversed_fragments[$key] = null;
-				array_unshift($path_fragments, $fragment);
-				
+				$categories = $filtered;
 				$path_fragment = '/' . $fragment . $path_fragment;
-				$list = $sorted;
 				
 			}
 			
 			if($path_fragment)
-			{	
-				$menu_fragments = array_values(array_filter($reversed_fragments));
-				
-				if(count($list) === 1 || !count($menu_fragments))
+			{
+				if(!count($menu_fragments))
 				{
 					$menu_fragments[] = $path_fragments[0];
 				}
 				
-				$computed_menu_path = implode('/', $menu_fragments);
-				
-				$dbo = JFactory::getDbo();
-				$val_all = $dbo->quote('*');
-				$val_language = $dbo->quote($this->_language);
-				
-				$dbo->setQuery($dbo->getQuery(true)
-					->select($dbo->quoteName('link'))
-					->from($dbo->quoteName('#__menu'))
-					->where($dbo->quoteName('path') . "=" . $dbo->quote($computed_menu_path))
-					->where($dbo->quoteName('language') . " IN($val_language,$val_all)")
-				);
-				
-				if($menuitemlink = $dbo->loadResult())
+				if($menu_fragments[0] !== 'component')
 				{
-					if($menu_fragments[0] === $path_fragments[0])
+					$computed_menu_path = implode('/', $menu_fragments);
+					
+					$dbo = JFactory::getDbo();
+					$name_link = $dbo->quoteName('link');
+					$name_level = $dbo->quoteName('level');
+					$name_lang = $dbo->quoteName('language');
+					$name_published = $dbo->quoteName('published');
+					$name_path = $dbo->quoteName('path');
+					$name_home = $dbo->quoteName('home');
+					
+					$val_all = $dbo->quote('*');
+					$val_lang = $dbo->quote($this->_language);
+					$val_computed_menu_path = $dbo->quote($computed_menu_path);
+					
+					$table_menu = $dbo->quoteName('#__menu');
+					
+					$dbo->setQuery("
+						SELECT $name_link, $name_level, $name_path, $name_home
+						FROM $table_menu
+						WHERE $name_lang IN($val_lang,$val_all)
+						AND $name_published = 1
+						AND (
+							$name_path = $val_computed_menu_path
+							OR ($name_home = 1 AND ($subcond))
+						)
+						ORDER BY $name_home
+					");
+					
+					if($menuitem = $dbo->loadObject())
 					{
-						if(count($path_fragments) > 1)
+						if(!$menuitem->home)
 						{
 							array_shift($path_fragments);
 						}
 						else
 						{
-							foreach($list as $item)
+							$menuitem->level -= 1;
+						}
+						
+						$categories = array_filter($categories, function($category) use ($menuitem) {
+							return strpos($menuitem->link, "option=" . $category->extension);
+						});
+						
+						if(count($categories) > 1)
+						{
+							if(preg_match("#.+?([\d]+)$#", $menuitem->link, $matches))
 							{
-								if(!$item->extension && strpos($menuitemlink, "&id=" . $item->catid))
+								$name_alias = $dbo->quoteName('alias');
+								$table_categories = $dbo->quoteName('#__categories');
+								$name_id = $dbo->quoteName('id');
+								$val_id = (int) $matches[1];
+								
+								$dbo->setQuery("
+									SELECT $name_alias
+									FROM $table_categories
+									WHERE $name_id = $val_id
+									AND $name_published = 1
+									AND $name_lang IN($val_lang,$val_all)
+								");
+								
+								if($parent_catalias = $dbo->loadResult())
 								{
-									$item->first_fragment = null;
-									return $item;
+									$categories = array_filter($categories, function($category) use ($parent_catalias, $val_id)
+									{
+										return strpos('/' . $category->path, '/' . $parent_catalias . '/') !== false || 
+											$category->catid == $val_id;
+									});
 								}
 							}
 						}
-					}
-					
-					foreach($list as $item)
-					{
-						if($item->extension && strpos($menuitemlink, "option=" . $item->extension))
+						
+						if(count($categories) > 1)
 						{
-							$item->first_fragment = $item->extension === 'com_tags' ? 
-								array_pop($path_fragments) : implode('/', $path_fragments);
-							return $item;
+							$categories = array_filter($categories, function($category) use ($menuitem, $menu_fragments_num)
+							{
+								return $category->level + $menuitem->level - 1 === $menu_fragments_num;
+							});
+						}
+						
+						if(!count($categories))
+						{
+							return null;
 						}
 					}
 				}
 				
-				$item = array_shift($list);
+				$category = array_shift($categories);
 				
-				$item->first_fragment = $item->extension === 'com_tags' ? 
+				if(empty($path_fragments) && $category->extension)
+				{
+					$path_fragments[] = array_shift($menu_fragments);
+				}
+				
+				$category->first_fragment = $category->extension === 'com_tags' ? 
 					array_pop($path_fragments) : implode('/', $path_fragments);
 				
-				return $item;
+				
+				if($catalias)
+				{
+					foreach($items as $item)
+					{
+						if($item->alias === $catalias && $item->catid === $category->id && 
+							$this->strend($category->first_fragment, $category->path))
+						{
+							return null;
+						}
+					}
+				}
+				
 			}
+			
+			return $category;
+			
 		}
+		
+	}
+	
+	
+	PRIVATE FUNCTION strend($haystack, $needle)
+	{
+		$offset = strlen($haystack) - strlen($needle);	
+		return $offset >= 0 && strpos($haystack, $needle, $offset) !== false;
 	}
 	
 	
