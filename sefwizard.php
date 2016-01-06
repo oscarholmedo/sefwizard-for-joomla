@@ -252,73 +252,68 @@ class PlgSystemSefwizard extends JPlugin
 						{
 							$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
 						}
-						
-						if(!$this->_sef)
+						elseif($catalias)
 						{
-							if($catalias)
+							$categories = array_filter($categories, function($category) use ($catalias) {
+								return $category->alias === $catalias;
+							});
+							
+							$filtered = array();
+							
+							if(count($categories))
 							{
-								$categories = array_filter($categories, function($category) use ($catalias) {
-									return $category->alias === $catalias;
-								});
-								
-								$filtered = array();
-								
-								if(count($categories))
-								{
-									foreach ($items as $item) {
-										foreach ($categories as $category) {
-											if (!$item->path && $item->catid === $category->id)
-											{
-												$item->path = $category->path;
-												$filtered[] = $item;
-											}
+								foreach ($items as $item) {
+									foreach ($categories as $category) {
+										if (!$item->path && $item->catid === $category->id)
+										{
+											$item->path = $category->path;
+											$filtered[] = $item;
 										}
 									}
 								}
-								else
-								{
-									foreach ($items as $item) {
-										$item->path = $catalias;
-										$filtered[] = $item;
-									}
-								}
-								
-								if($item = $this->getCategory($items, $filtered, $catalias, true))
-								{
-									if($item->first_fragment)
-									{
-										$pattern = '#(./)?(' . preg_quote($item->first_fragment, '#') . ')/([^/]+)$#';
-										$replacement = '${1}' . $item->catid . "-$2/{$item->id}-$3";
-									}
-									else
-									{
-										$pattern = '#([^/]+)$#';
-										$replacement = $item->id . '-$1';
-									}
-									
-									$this->_sef = preg_replace($pattern, $replacement, $path);
-								}
-								
 							}
 							else
 							{
-								$dbo->setQuery("
-									SELECT $name_link
-										FROM $table_menu
-											WHERE $name_language IN($val_language,$val_all)
-												AND $name_home = 1
-													AND ($subcond)
-								");			
-								
-								if($menu_items = $dbo->loadObjectList())
+								foreach ($items as $item) {
+									$item->path = $catalias;
+									$filtered[] = $item;
+								}
+							}
+							
+							if($item = $this->getCategory($items, $filtered, $catalias, true))
+							{
+								if($item->first_fragment)
 								{
-									foreach ($menu_items as $menu_item) {
-										foreach ($items as $item) {
-											if(strpos($menu_item->link, "&id=" . $item->catid))
-											{
-												$this->_sef = preg_replace("#([^/]+$)#", $item->id . "-$1", $path);
-												break 2;
-											}
+									$pattern = '#(./)?(' . preg_quote($item->first_fragment, '#') . ')/([^/]+)$#';
+									$replacement = '${1}' . $item->catid . "-$2/{$item->id}-$3";
+								}
+								else
+								{
+									$pattern = '#([^/]+)$#';
+									$replacement = $item->id . '-$1';
+								}
+								
+								$this->_sef = preg_replace($pattern, $replacement, $path);
+							}
+						}
+						else
+						{
+							$dbo->setQuery("
+								SELECT $name_link
+									FROM $table_menu
+										WHERE $name_language IN($val_language,$val_all)
+											AND $name_home = 1
+												AND ($subcond)
+							");			
+							
+							if($menu_items = $dbo->loadObjectList())
+							{
+								foreach ($menu_items as $menu_item) {
+									foreach ($items as $item) {
+										if(strpos($menu_item->link, "&id=" . $item->catid))
+										{
+											$this->_sef = preg_replace("#([^/]+$)#", $item->id . "-$1", $path);
+											break 2;
 										}
 									}
 								}
