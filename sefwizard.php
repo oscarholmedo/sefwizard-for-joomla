@@ -412,7 +412,8 @@ class PlgSystemSefwizard extends JPlugin
 			if(in_array($option, $this->_options))
 			{
 				$vars = $this->_router->getVars();				
-				$url = preg_replace('#\?.*$#', '', JRoute::_('index.php?' . http_build_query($vars), false));
+				$url_parts = explode("?", JRoute::_('index.php?' . http_build_query($vars), false), 2);
+				$path = $url_parts[0];
 				
 				if($this->_debug)
 				{
@@ -420,20 +421,23 @@ class PlgSystemSefwizard extends JPlugin
 				}
 				
 				$uri = JURI::getInstance();
-				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $url;
+				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
 				
-				if($canonical !== JURI::current())
+				if($canonical !== JURI::current() && strcasecmp($path, JURI::root(true) . "/index.php") &&
+					($option !== "com_content" || $app->input->get("view") !== "archive"))
 				{
-					if($url !== JURI::root(true) . "/index.php")
+					if($duplicate_handling == 1 && 
+						(empty($url_parts[1]) || !preg_match("#\b(?:cat|Item)?id=#i", $url_parts[1])))
 					{
-						if($duplicate_handling == 1 && !$uri->getQuery())
+						if($query_string = $uri->getQuery())
 						{
-							$app->redirect($canonical, 301);
+							$canonical .= '?' . $query_string;
 						}
-						else if( !( $option === "com_content" && $app->input->get("view") === "archive" ) )
-						{
-							throw new Exception("Not found", 404);
-						}
+						$app->redirect($canonical, 301);
+					}
+					else
+					{
+						throw new Exception("Not found", 404);
 					}
 				}
 				
