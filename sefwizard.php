@@ -275,7 +275,7 @@ class PlgSystemSefwizard extends JPlugin
 							{
 								foreach ($items as $item) {
 									foreach ($categories as $category) {
-										if (!$item->path && $item->catid === $category->id)
+										if (!$item->path && $item->catid == $category->id)
 										{
 											$item->path = $category->path;
 											$filtered[] = $item;
