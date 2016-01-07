@@ -415,7 +415,8 @@ class PlgSystemSefwizard extends JPlugin
 			$app = JFactory::getApplication();
 			$option = $app->input->get("option");
 			
-			if(in_array($option, $this->_options))
+			if(in_array($option, $this->_options) && 
+				($option !== "com_content" || $app->input->get("view") !== "archive"))
 			{
 				$vars = $this->_router->getVars();				
 				$url_parts = explode("?", JRoute::_('index.php?' . http_build_query($vars), false), 2);
@@ -428,9 +429,10 @@ class PlgSystemSefwizard extends JPlugin
 				
 				$uri = JURI::getInstance();
 				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
+				$root = JURI::root(true);
 				
-				if($canonical !== JURI::current() && strcasecmp($path, JURI::root(true) . "/index.php") &&
-					($option !== "com_content" || $app->input->get("view") !== "archive"))
+				if($canonical !== JURI::current() && strcasecmp($path, "$root/index.php") &&
+					stripos($path, "$root/component") !== 0)
 				{
 					if($duplicate_handling == 1 && 
 						(empty($url_parts[1]) || !preg_match("#\b(?:cat|Item)?id=#i", $url_parts[1])))
@@ -617,6 +619,10 @@ class PlgSystemSefwizard extends JPlugin
 						}
 					}
 				}
+				elseif(count($path_fragments) > 1)
+				{
+					array_shift($path_fragments);
+				}
 				
 				$category = array_shift($categories);
 				
@@ -633,7 +639,7 @@ class PlgSystemSefwizard extends JPlugin
 				{
 					foreach($items as $item)
 					{
-						if($item->alias === $catalias && $item->catid === $category->id && 
+						if($item->alias === $catalias && $item->catid == $category->id && 
 							$this->strend($category->first_fragment, $category->path))
 						{
 							return null;
