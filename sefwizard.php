@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0.2
+/* SEF Wizard extension for Joomla 3.x - Version 1.0.3
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -24,7 +24,8 @@ class PlgSystemSefwizard extends JPlugin
 		$_debug = null,
 		$_execute = false,
 		$_language = '',
-		$_fragments = array();
+		$_fragments = array(),
+		$_rootlen = 0;
 		
 	
 	PUBLIC FUNCTION onAfterInitialise()
@@ -58,6 +59,7 @@ class PlgSystemSefwizard extends JPlugin
 			$uri  = JURI::getInstance();
 			$path = $uri->getPath();
 			$len  = strlen(JURI::root(true));
+			$this->_rootlen = $len;
 			
 			if(stripos($path, '/index.php/') === $len)
 			{
@@ -133,9 +135,12 @@ class PlgSystemSefwizard extends JPlugin
 					
 					$subquery = "";
 					$subcond = "";
+					$extensions = array();
 					
 					if($this->_options['com_content'])
 					{
+						$extensions[] = $val_com_content;
+						
 						$subquery = "SELECT 
 										$name_id, 
 										$name_language, 
@@ -153,6 +158,8 @@ class PlgSystemSefwizard extends JPlugin
 					
 					if($this->_options['com_contact'])
 					{
+						$extensions[] = $val_com_contact;
+						
 						if ($subquery) {
 							$subquery .= " UNION";
 						}
@@ -185,7 +192,7 @@ class PlgSystemSefwizard extends JPlugin
 										$name_extension, 
 										$name_published 
 									FROM $table_categories 
-									WHERE $name_extension IN($val_com_content,$val_com_contact) 
+									WHERE $name_extension IN(" . implode(',', $extensions) . ") 
 									AND $name_alias = $val_alias";
 									
 						if ($catalias) {
@@ -210,6 +217,9 @@ class PlgSystemSefwizard extends JPlugin
 										$name_published
 									FROM $table_tags 
 									WHERE $name_alias = $val_alias";
+									
+						$subcond .= $subcond ? ' OR ' : '';
+						$subcond .= "$name_link LIKE " . $dbo->quote('index.php?option=com_tags%');
 					}
 					
 					$dbo->setQuery("
@@ -230,6 +240,7 @@ class PlgSystemSefwizard extends JPlugin
 									AND $t1.$name_published > 0
 						ORDER BY $name_level DESC
 					");
+					
 					
 					if($list = $dbo->loadObjectList())
 					{	
@@ -264,7 +275,7 @@ class PlgSystemSefwizard extends JPlugin
 							{
 								foreach ($items as $item) {
 									foreach ($categories as $category) {
-										if (!$item->path && $item->catid === $category->id)
+										if (!$item->path && $item->catid == $category->id)
 										{
 											$item->path = $category->path;
 											$filtered[] = $item;
@@ -328,7 +339,7 @@ class PlgSystemSefwizard extends JPlugin
 					}
 				}
 			}
-
+			
 			$this->_router->attachBuildRule(array($this, "build"));
 			
 			if($this->_debug)
@@ -365,18 +376,13 @@ class PlgSystemSefwizard extends JPlugin
 				
 				$len = strlen( str_replace( 'index.php', '', $uri->getPath() ) );
 				
-				if($len)
+				if($len && !$this->_sefRewrite)
 				{
-					if(!$this->_sefRewrite)
-					{
-						$fragment = '/index.php/';
-						$len += 10;
-					}
+					$fragment = '/index.php/';
+					$len += 10;
 				}
 				
-				$len += strlen( JURI::root(true) );
-				
-				if($len)
+				if($len += $this->_rootlen)
 				{
 					$path = $fragment . substr($path, $len);
 				}
@@ -409,7 +415,8 @@ class PlgSystemSefwizard extends JPlugin
 			$app = JFactory::getApplication();
 			$option = $app->input->get("option");
 			
-			if(in_array($option, $this->_options))
+			if(in_array($option, $this->_options) && 
+				($option !== "com_content" || $app->input->get("view") !== "archive"))
 			{
 				$vars = $this->_router->getVars();				
 				$url_parts = explode("?", JRoute::_('index.php?' . http_build_query($vars), false), 2);
@@ -422,9 +429,10 @@ class PlgSystemSefwizard extends JPlugin
 				
 				$uri = JURI::getInstance();
 				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
+				$root = JURI::root(true);
 				
-				if($canonical !== JURI::current() && strcasecmp($path, JURI::root(true) . "/index.php") &&
-					($option !== "com_content" || $app->input->get("view") !== "archive"))
+				if($canonical !== JURI::current() && strcasecmp($path, "$root/index.php") &&
+					stripos($path, "$root/component") !== 0)
 				{
 					if($duplicate_handling == 1 && 
 						(empty($url_parts[1]) || !preg_match("#\b(?:cat|Item)?id=#i", $url_parts[1])))
@@ -611,6 +619,10 @@ class PlgSystemSefwizard extends JPlugin
 						}
 					}
 				}
+				elseif(count($path_fragments) > 1)
+				{
+					array_shift($path_fragments);
+				}
 				
 				$category = array_shift($categories);
 				
@@ -627,7 +639,7 @@ class PlgSystemSefwizard extends JPlugin
 				{
 					foreach($items as $item)
 					{
-						if($item->alias === $catalias && $item->catid === $category->id && 
+						if($item->alias === $catalias && $item->catid == $category->id && 
 							$this->strend($category->first_fragment, $category->path))
 						{
 							return null;
