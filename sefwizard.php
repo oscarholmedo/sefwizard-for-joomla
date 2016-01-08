@@ -409,10 +409,7 @@ class PlgSystemSefwizard extends JPlugin
 					{
 						if($pos = strrpos($path, '.'))
 						{
-							if(strpos($path, 'php', $pos) !== 0)
-							{
-								$path = substr_replace($path, '', $pos);
-							}
+							$path = substr_replace($path, '', $pos);
 						}
 					}
 					
