@@ -506,8 +506,6 @@ class PlgSystemSefwizard extends JPlugin
 				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
 				$root = JURI::root(true);
 				
-				
-				
 				if($canonical !== JURI::current() && !strcasecmp($path, "$root/index.php") &&
 					stripos($path, "$root/component") !== 0)
 				{

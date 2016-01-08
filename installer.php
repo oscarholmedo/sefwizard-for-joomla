@@ -20,14 +20,9 @@ class PlgSystemSefwizardInstallerScript
 	{
 		$app = JFactory::getApplication();
 		
-		if(version_compare(JVERSION, '3.0', '<'))
+		if(version_compare(JVERSION, '3.4.8', '<'))
 		{
 			$app->redirect(JURI::getInstance()->toString(), JText::_('PLG_SEFWIZARD_JOOMLA_VERSION_CHECK_FAILURE'), 'error');
-			return false;
-		}
-		if(version_compare(PHP_VERSION, '5.3', '<'))
-		{
-			$app->redirect(JURI::getInstance()->toString(), JText::_('PLG_SEFWIZARD_PHP_VERSION_CHECK_FAILURE'), 'error');
 			return false;
 		}
 		
