@@ -383,7 +383,7 @@ class PlgSystemSefwizard extends JPlugin
 				$url = $router->build($uri);
 				$path = $url->getPath();
 				
-				if($path !== '/index.php')
+				if($path !== JURI::root(true) . '/index.php')
 				{
 					$queryString = $url->getQuery();
 					$fragment = $url->getFragment();
