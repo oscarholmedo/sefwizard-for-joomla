@@ -20,6 +20,7 @@ class PlgSystemSefwizard extends JPlugin
 		$_sef = "",
 		$_router = null,
 		$_sefRewrite = null,
+		$_sefSuffix = null,
 		$_options = array(),
 		$_debug = null,
 		$_execute = false,
@@ -31,8 +32,9 @@ class PlgSystemSefwizard extends JPlugin
 	PUBLIC FUNCTION onAfterInitialise()
 	{
 		$app = JFactory::getApplication();
+		$config = JFactory::getConfig();
 		
-		if($app->isSite() && JFactory::getConfig()->get('sef'))
+		if($app->isSite() && $config->get('sef'))
 		{	
 			$this->_options["com_content"] = $this->params->get("com_content") ? "com_content" : "";
 			$this->_options["com_contact"] = $this->params->get("com_contact") ? "com_contact" : "";
@@ -47,7 +49,7 @@ class PlgSystemSefwizard extends JPlugin
 			
 			$this->_execute = true;
 			$this->_router = $app->getRouter();
-			$this->_sefRewrite = JFactory::getConfig()->get('sef_rewrite');
+			$this->_sefRewrite = $config->get('sef_rewrite');
 			
 			if($this->_debug = $this->params->get("debug"))
 			{
@@ -69,6 +71,14 @@ class PlgSystemSefwizard extends JPlugin
 			if($len)
 			{
 				$path = substr($path, $len);
+			}
+			
+			if($this->_sefSuffix = $config->get('sef_suffix'))
+			{
+				if($pos = strrpos($path, '.'))
+				{
+					$path = substr_replace($path, '', $pos);
+				}
 			}
 			
 			$fragments = explode("/", $path);
@@ -366,43 +376,108 @@ class PlgSystemSefwizard extends JPlugin
 		{
 			$query = $uri->getQuery(true);
 			
-			if(isset($query["option"], $query["id"]) && in_array($query["option"], $this->_options) && !is_array($query["id"]))
+			if(isset($query["option"], $query["id"]) && 
+				in_array($query["option"], $this->_options) && !is_array($query["id"]))
 			{	
 				$router = clone $siteRouter;
 				$url = $router->build($uri);
 				
-				$path = $url->toString(array("path", "query", "fragment"));
-				$fragment = '';
+				$queryString = $url->getQuery();
+				$fragment = $url->getFragment();
+				$entry_point = '';
+				
+				$path = $url->getPath();
+				$queryString = $queryString ? "?{$queryString}" : '';
+				$fragment = $fragment ? "#{$fragment}" : '';
 				
 				$len = strlen( str_replace( 'index.php', '', $uri->getPath() ) );
 				
 				if($len && !$this->_sefRewrite)
 				{
-					$fragment = '/index.php/';
+					$entry_point = '/index.php/';
 					$len += 10;
 				}
 				
 				if($len += $this->_rootlen)
 				{
-					$path = $fragment . substr($path, $len);
+					$path = $entry_point . substr($path, $len);
 				}
 				
-				$subpattern = preg_replace('#[^\d]*([\d]+).*#', '$1', $query["id"]);
-				
-				if(isset($query["catid"]))
+				if($this->_sefSuffix)
 				{
-					$subpattern = '(?:' . $subpattern . '|' . preg_replace('#[^\d]*([\d]+).*#', '$1', $query["catid"]) . ')';
+					if($pos = strrpos($path, '.'))
+					{
+						$path = substr_replace($path, '', $pos);
+					}
 				}
 				
-				$path = preg_replace("#/{$subpattern}-#", "/", $path);
+				$id = $this->getReplStr($query["id"]);
 				
-				$uri->setPath($path);
+				if($query["view"] === "category")
+				{
+					$path = $this->remove_catID($path, $id, $query);
+				}
+				else
+				{
+					$pos = strrpos($path, $id);
+					$ending = "";
+					
+					if($pos !== false)
+					{
+						$ending = substr($path, $pos + strlen($id));
+						$path = substr_replace($path, "/", $pos);
+					}
+					
+					if(isset($query["catid"]))
+					{
+						$catid = $this->getReplStr($query["catid"]);
+						$path = $this->remove_catID($path, $catid, $query);
+					}
+					
+					$path .= $ending;
+				}
+				
+				$uri->setPath($path . $queryString . $fragment);
 				$uri->setQuery($vars);
 				
 			}
 		}
 		
 		return $vars;
+	}
+	
+	
+	PRIVATE FUNCTION remove_catID($path, $id, $query)
+	{
+		if($count = substr_count($path, $id))
+		{
+			if($count === 1)
+			{
+				$path = str_replace($id, "/", $path);
+			}
+			else
+			{
+				$offset = 0;
+				
+				if(isset($query["Itemid"]))
+				{
+					$menu = JFactory::getApplication()->getMenu();
+					$route = "/" . $menu->getItem($query["Itemid"])->route;
+					
+					if(strpos($route, $id) !== false)
+					{
+						$offset = strlen($route);
+					}
+					
+				}
+				
+				$path = substr_replace($path, "/", strpos($path, $id, $offset), strlen($id));
+				
+			}
+		}
+		
+		return $path;
+		
 	}
 	
 	
