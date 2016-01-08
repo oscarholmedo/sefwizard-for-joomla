@@ -381,65 +381,70 @@ class PlgSystemSefwizard extends JPlugin
 			{	
 				$router = clone $siteRouter;
 				$url = $router->build($uri);
-				
-				$queryString = $url->getQuery();
-				$fragment = $url->getFragment();
-				$entry_point = '';
-				
 				$path = $url->getPath();
-				$queryString = $queryString ? "?{$queryString}" : '';
-				$fragment = $fragment ? "#{$fragment}" : '';
 				
-				$len = strlen( str_replace( 'index.php', '', $uri->getPath() ) );
-				
-				if($len && !$this->_sefRewrite)
+				if($path !== '/index.php')
 				{
-					$entry_point = '/index.php/';
-					$len += 10;
-				}
-				
-				if($len += $this->_rootlen)
-				{
-					$path = $entry_point . substr($path, $len);
-				}
-				
-				if($this->_sefSuffix)
-				{
-					if($pos = strrpos($path, '.'))
-					{
-						$path = substr_replace($path, '', $pos);
-					}
-				}
-				
-				$id = $this->getReplStr($query["id"]);
-				
-				if($query["view"] === "category")
-				{
-					$path = $this->remove_catID($path, $id, $query);
-				}
-				else
-				{
-					$pos = strrpos($path, $id);
-					$ending = "";
+					$queryString = $url->getQuery();
+					$fragment = $url->getFragment();
+					$entry_point = '';
 					
-					if($pos !== false)
+					$queryString = $queryString ? "?{$queryString}" : '';
+					$fragment = $fragment ? "#{$fragment}" : '';
+					
+					$len = strlen( str_replace( 'index.php', '', $uri->getPath() ) );
+					
+					if($len && !$this->_sefRewrite)
 					{
-						$ending = substr($path, $pos + strlen($id));
-						$path = substr_replace($path, "/", $pos);
+						$entry_point = '/index.php/';
+						$len += 10;
 					}
 					
-					if(isset($query["catid"]))
+					if($len += $this->_rootlen)
 					{
-						$catid = $this->getReplStr($query["catid"]);
-						$path = $this->remove_catID($path, $catid, $query);
+						$path = $entry_point . substr($path, $len);
 					}
 					
-					$path .= $ending;
+					if($this->_sefSuffix)
+					{
+						if($pos = strrpos($path, '.'))
+						{
+							if(strpos($path, 'php', $pos) !== 0)
+							{
+								$path = substr_replace($path, '', $pos);
+							}
+						}
+					}
+					
+					$id = $this->getReplStr($query["id"]);
+					
+					if($query["view"] === "category")
+					{
+						$path = $this->remove_catID($path, $id, $query);
+					}
+					else
+					{
+						$pos = strrpos($path, $id);
+						$ending = "";
+						
+						if($pos !== false)
+						{
+							$ending = substr($path, $pos + strlen($id));
+							$path = substr_replace($path, "/", $pos);
+						}
+						
+						if(isset($query["catid"]))
+						{
+							$catid = $this->getReplStr($query["catid"]);
+							$path = $this->remove_catID($path, $catid, $query);
+						}
+						
+						$path .= $ending;
+					}
+					
+					$uri->setPath($path . $queryString . $fragment);
+					$uri->setQuery($vars);
 				}
-				
-				$uri->setPath($path . $queryString . $fragment);
-				$uri->setQuery($vars);
-				
 			}
 		}
 		
@@ -506,7 +511,7 @@ class PlgSystemSefwizard extends JPlugin
 				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
 				$root = JURI::root(true);
 				
-				if($canonical !== JURI::current() && strcasecmp($path, "$root/index.php") &&
+				if($canonical !== JURI::current() && $path !== "$root/index.php" &&
 					stripos($path, "$root/component") !== 0)
 				{
 					if($duplicate_handling == 1 && 
