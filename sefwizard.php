@@ -506,7 +506,9 @@ class PlgSystemSefwizard extends JPlugin
 				$canonical = $uri->toString(array('scheme', 'host', 'port')) . $path;
 				$root = JURI::root(true);
 				
-				if($canonical !== JURI::current() && strcasecmp($path, "$root/index.php") &&
+				
+				
+				if($canonical !== JURI::current() && !strcasecmp($path, "$root/index.php") &&
 					stripos($path, "$root/component") !== 0)
 				{
 					if($duplicate_handling == 1 && 
@@ -735,6 +737,12 @@ class PlgSystemSefwizard extends JPlugin
 	{
 		$offset = strlen($haystack) - strlen($needle);	
 		return $offset >= 0 && strpos($haystack, $needle, $offset) !== false;
+	}
+	
+	
+	PRIVATE FUNCTION getReplStr($stringID)
+	{
+		return preg_replace('#[^\d]*([\d]+).*#', '/$1-', (string) $stringID);
 	}
 	
 	
