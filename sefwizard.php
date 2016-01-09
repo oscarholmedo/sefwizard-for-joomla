@@ -562,14 +562,6 @@ class PlgSystemSefwizard extends JPlugin
 			$app = JFactory::getApplication();
 			$html = $app->getBody();
 			
-			$html = preg_replace_callback("#(<a(?:(?!</a>).)+?)(<pre>.+?</pre>)#is", function($m) {
-				return $m[2] . $m[1];
-			}, $html);
-			
-			$html = preg_replace_callback("#(<(h\d|p|span)(?:(?!</\\2).)+?)(<pre>.+?</pre>)#is", function($m) {
-				return $m[3] . $m[1];
-			}, $html);
-			
 			if($this->_debug)
 			{
 				$html = $this->script_execution_time("end", "onAfterRender", $html);
