@@ -358,7 +358,7 @@ class PlgSystemSefwizard extends JPlugin
 			{
 				$this->script_execution_time("end", "onAfterInitialise");
 			}
-
+			
 		}
 		
 	}
@@ -417,12 +417,10 @@ class PlgSystemSefwizard extends JPlugin
 					if(isset($query["Itemid"]))
 					{
 						$menuitem = $this->_menu->getItem($query["Itemid"]);
-						$route = '/' . $menuitem->route;
-						$offset = strlen($route);
 						
-						if($menuitem->home)
+						if(!$menuitem->home)
 						{
-							$offset -= (strlen($menuitem->alias) + 1);
+							$offset = strlen($route) + 1;
 						}
 						
 					}
