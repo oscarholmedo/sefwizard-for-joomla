@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0.6
+/* SEF Wizard extension for Joomla 3.x - Version 1.0.7
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
