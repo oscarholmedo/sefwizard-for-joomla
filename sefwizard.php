@@ -65,14 +65,14 @@ class PlgSystemSefwizard extends JPlugin
 			$len  = strlen(JURI::root(true));
 			$this->_rootlen = $len;
 			
-			if(stripos($path, '/index.php/') === $len)
+			if(stripos($path, '/index.php') === $len)
 			{
 				$len += 10;
 			}
 			
 			if($len)
 			{
-				$path = substr($path, $len);
+				$path = substr($path . '/', $len);
 			}
 			
 			if($this->_sefSuffix = $config->get('sef_suffix'))
@@ -391,9 +391,6 @@ class PlgSystemSefwizard extends JPlugin
 					$fragment = $url->getFragment();
 					$entry_point = '';
 					
-					$queryString = $queryString ? "?{$queryString}" : '';
-					$fragment = $fragment ? "#{$fragment}" : '';
-					
 					$len = strlen( str_replace( 'index.php', '', $uri->getPath() ) );
 					
 					if($len && !$this->_sefRewrite)
@@ -467,8 +464,9 @@ class PlgSystemSefwizard extends JPlugin
 							
 						}
 						
-						$uri->setPath($path . $queryString . $fragment);
-						$uri->setQuery($vars);
+						$uri->setPath($path);
+						$uri->setQuery($queryString);
+						$uri->setFragment($fragment);
 						
 					}
 				}
