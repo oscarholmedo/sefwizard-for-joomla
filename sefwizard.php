@@ -419,8 +419,15 @@ class PlgSystemSefwizard extends JPlugin
 		
 					if(isset($query["Itemid"]))
 					{
-						$route = '/' . $this->_menu->getItem($query["Itemid"])->route;
+						$menuitem = $this->_menu->getItem($query["Itemid"]);
+						$route = '/' . $menuitem->route;
 						$offset = strlen($route);
+						
+						if($menuitem->home)
+						{
+							$offset -= (strlen($menuitem->alias) + 1);
+						}
+						
 					}
 					
 					if($offset < strlen($path))
@@ -556,6 +563,14 @@ class PlgSystemSefwizard extends JPlugin
 			
 			$app = JFactory::getApplication();
 			$html = $app->getBody();
+			
+			$html = preg_replace_callback("#(<a(?:(?!</a>).)+?)(<pre>.+?</pre>)#is", function($m) {
+				return $m[2] . $m[1];
+			}, $html);
+			
+			$html = preg_replace_callback("#(<(h\d|p|span)(?:(?!</\\2).)+?)(<pre>.+?</pre>)#is", function($m) {
+				return $m[3] . $m[1];
+			}, $html);
 			
 			if($this->_debug)
 			{
