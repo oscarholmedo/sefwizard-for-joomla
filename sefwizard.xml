@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension type="plugin" version="3.4.8" group="system" method="upgrade">
 	<name>SEF Wizard</name>
-	<version>1.0.4</version>
+	<version>1.0.5</version>
 	<creationDate>2016-01-01</creationDate>
 	<license>http://www.gnu.org/licenses/gpl-2.0.html</license>
 	<copyright>Copyright 2016 Philip Sorokin. All rights reserved.</copyright>
