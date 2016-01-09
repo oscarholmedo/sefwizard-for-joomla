@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0.3
+/* SEF Wizard extension for Joomla 3.x - Version 1.0.4
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -19,13 +19,14 @@ class PlgSystemSefwizard extends JPlugin
 	PRIVATE
 		$_sef = "",
 		$_router = null,
-		$_sefRewrite = null,
-		$_sefSuffix = null,
+		$_sefRewrite = false,
+		$_sefSuffix = false,
 		$_options = array(),
-		$_debug = null,
+		$_debug = false,
 		$_execute = false,
 		$_language = '',
 		$_fragments = array(),
+		$_menu = null,
 		$_rootlen = 0;
 		
 	
@@ -50,6 +51,7 @@ class PlgSystemSefwizard extends JPlugin
 			$this->_execute = true;
 			$this->_router = $app->getRouter();
 			$this->_sefRewrite = $config->get('sef_rewrite');
+			$this->_menu = $app->getMenu();
 			
 			if($this->_debug = $this->params->get("debug"))
 			{
@@ -413,34 +415,55 @@ class PlgSystemSefwizard extends JPlugin
 						}
 					}
 					
-					$id = $this->getReplStr($query["id"]);
-					
-					if($query["view"] === "category")
+					$offset = 0;
+		
+					if(isset($query["Itemid"]))
 					{
-						$path = $this->remove_catID($path, $id, $query);
-					}
-					else
-					{
-						$pos = strrpos($path, $id);
-						$ending = "";
-						
-						if($pos !== false)
-						{
-							$ending = substr($path, $pos + strlen($id));
-							$path = substr_replace($path, "/", $pos);
-						}
-						
-						if(isset($query["catid"]))
-						{
-							$catid = $this->getReplStr($query["catid"]);
-							$path = $this->remove_catID($path, $catid, $query);
-						}
-						
-						$path .= $ending;
+						$route = '/' . $this->_menu->getItem($query["Itemid"])->route;
+						$offset = strlen($route);
 					}
 					
-					$uri->setPath($path . $queryString . $fragment);
-					$uri->setQuery($vars);
+					if($offset < strlen($path))
+					{
+						if(in_array($query["option"], array('com_contact', 'com_tags')))
+						{
+							$path = preg_replace("#(?<=.{" . $offset . "})/\d+-#", "/", $path);
+						}
+						else
+						{
+							$id = $this->getID_fragment($query["id"]);
+							
+							if($query["view"] === 'article')
+							{
+								$ending = "";
+								$pos = strrpos($path, $id, $offset);
+								
+								if($pos !== false)
+								{
+									$ending = substr($path, $pos + strlen($id));
+									$path = substr_replace($path, "/", $pos);
+								}
+								
+								if(isset($query["catid"]) && $offset < strlen($path) - 1)
+								{
+									$catid = $this->getID_fragment($query["catid"]);
+									$path = $this->remove_catID($path, $catid, $query, $offset);
+								}
+								
+								$path .= $ending;
+								
+							}
+							else
+							{
+								$path = $this->remove_catID($path, $id, $query, $offset);
+							}
+							
+						}
+						
+						$uri->setPath($path . $queryString . $fragment);
+						$uri->setQuery($vars);
+						
+					}
 				}
 			}
 		}
@@ -449,33 +472,19 @@ class PlgSystemSefwizard extends JPlugin
 	}
 	
 	
-	PRIVATE FUNCTION remove_catID($path, $id, $query)
+	PRIVATE FUNCTION getID_fragment($stringID)
 	{
-		if($count = substr_count($path, $id))
+		return preg_replace('#[^\d]*([\d]+).*#', '/$1-', (string) $stringID);
+	}
+	
+	
+	PRIVATE FUNCTION remove_catID($path, $catid, $query, $offset)
+	{
+		$pos = strpos($path, $catid, $offset);
+		
+		if($pos !== false)
 		{
-			if($count === 1)
-			{
-				$path = str_replace($id, "/", $path);
-			}
-			else
-			{
-				$offset = 0;
-				
-				if(isset($query["Itemid"]))
-				{
-					$menu = JFactory::getApplication()->getMenu();
-					$route = "/" . $menu->getItem($query["Itemid"])->route;
-					
-					if(strpos($route, $id) !== false)
-					{
-						$offset = strlen($route);
-					}
-					
-				}
-				
-				$path = substr_replace($path, "/", strpos($path, $id, $offset), strlen($id));
-				
-			}
+			$path = substr_replace($path, "/", $pos, strlen($catid));
 		}
 		
 		return $path;
@@ -737,12 +746,6 @@ class PlgSystemSefwizard extends JPlugin
 	{
 		$offset = strlen($haystack) - strlen($needle);	
 		return $offset >= 0 && strpos($haystack, $needle, $offset) !== false;
-	}
-	
-	
-	PRIVATE FUNCTION getReplStr($stringID)
-	{
-		return preg_replace('#[^\d]*([\d]+).*#', '/$1-', (string) $stringID);
 	}
 	
 	
