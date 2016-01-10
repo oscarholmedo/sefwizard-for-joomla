@@ -41,9 +41,9 @@ class PlgSystemSefwizard extends JPlugin
 			$this->_options["com_contact"] = $this->params->get("com_contact") ? "com_contact" : "";
 			$this->_options["com_tags"] = $this->params->get("com_tags") ? "com_tags" : "";
 			
-			$continue = array_filter($this->_options);
+			$options = array_filter($this->_options);
 			
-			if(empty($continue))
+			if(empty($options))
 			{
 				return false;
 			}
@@ -105,239 +105,254 @@ class PlgSystemSefwizard extends JPlugin
 					$langSEF = $codes[$langTAG]->sef;
 				}
 				
-				$this->_language = $langTAG;
-				
 				if($level = count($fragments))
 				{
-					$path = implode('/', $fragments);
-					$this->_fragments = $fragments;
-					
 					$alias = $fragments[$level-1];
 					$catalias = isset($fragments[$level-2]) ? $fragments[$level-2] : '';
+					$path = implode('/', $fragments);
 					
-					$val_alias = $dbo->quote($alias);
-					$val_path = $dbo->quote($path);
-					$val_language = $dbo->quote($langTAG);
-					$val_catalias = $dbo->quote($catalias);
-					$val_com_content = $dbo->quote('com_content');
-					$val_com_contact = $dbo->quote('com_contact');
-					$val_com_tags = $dbo->quote('com_tags');
-					$val_all = $dbo->quote('*');
+					$this->_language = $langTAG;
+					$this->_languages = array($langTAG, '*');
+					$this->_fragments = $fragments;
+					$this->_alias = $alias;
+					$this->_catalias = $catalias;
 					
-					$name_id = $dbo->quoteName('id');
-					$name_catid = $dbo->quoteName('catid');
-					$name_alias = $dbo->quoteName('alias');
-					$name_path = $dbo->quoteName('path');
-					$name_level = $dbo->quoteName('level');
-					$name_language = $dbo->quoteName('language');
-					$name_link = $dbo->quoteName('link');
-					$name_home = $dbo->quoteName('home');
-					$name_extension = $dbo->quoteName('extension');
-					$name_published = $dbo->quoteName('published');
-					$name_state = $dbo->quoteName('state');
+					$excludeParameters = array('route', 'language');
+					$excludeValues = array($path, $this->_languages);
 					
-					$table_menu = $dbo->quoteName('#__menu');
-					$table_content = $dbo->quoteName('#__content');
-					$table_categories = $dbo->quoteName('#__categories');
-					$table_contact_details = $dbo->quoteName('#__contact_details');
-					$table_tags = $dbo->quoteName('#__tags');
-					
-					$t1 = $dbo->quoteName('t1');
-					$t2 = $dbo->quoteName('t2');
-					
-					$subquery = "";
-					$subcond = "";
-					$extensions = array();
-					
-					if($this->_options['com_content'])
+					if(!$catalias)
 					{
-						$extensions[] = $val_com_content;
-						
-						$subquery = "SELECT 
-										$name_id, 
-										$name_language, 
-										$name_alias, 
-										$name_catid, 
-										null AS $name_path, 
-										null AS $name_level, 
-										null AS $name_extension, 
-										$name_state AS $name_published 
-								FROM $table_content 
-								WHERE $name_alias = $val_alias";
-						
-						$subcond = "$name_link LIKE " . $dbo->quote('index.php?option=com_content&view=category%');
+						$excludeParameters[] = 'home';
+						$excludeValues[] = 0;
 					}
 					
-					if($this->_options['com_contact'])
-					{
-						$extensions[] = $val_com_contact;
-						
-						if ($subquery) {
-							$subquery .= " UNION";
-						}
-						
-						$subquery .= " SELECT 
-										$name_id, 
-										$name_language, 
-										$name_alias, 
-										$name_catid, 
-										null AS $name_path, 
-										null AS $name_level, 
-										null AS $name_extension, 
-										$name_published 
-									FROM $table_contact_details 
-									WHERE $name_alias = $val_alias";
-						
-						$subcond .= $subcond ? ' OR ' : '';
-						$subcond .= "$name_link LIKE " . $dbo->quote('index.php?option=com_contact&view=category%');
-					}
+					$currentRouteItems = $this->_menu->getItems($excludeParameters, $excludeValues);
 					
-					if($subquery)
-					{
-						$subquery .= " UNION SELECT 
-										$name_id, 
-										$name_language, 
-										$name_alias, 
-										null AS $name_catid, 
-										$name_path, 
-										$name_level, 
-										$name_extension, 
-										$name_published 
-									FROM $table_categories 
-									WHERE $name_extension IN(" . implode(',', $extensions) . ") 
-									AND $name_alias = $val_alias";
-									
-						if ($catalias) {
-							$subquery .= " OR $name_alias = $val_catalias";
-						}
-					}
-					
-					if($this->_options['com_tags'])
-					{
-						if ($subquery) {
-							$subquery .= " UNION";
-						}
-						
-						$subquery .= " SELECT 
-										$name_id, 
-										$name_language, 
-										$name_alias, 
-										null AS $name_catid, 
-										$name_path, 
-										null as $name_level, 
-										$val_com_tags AS $name_extension, 
-										$name_published
-									FROM $table_tags 
-									WHERE $name_alias = $val_alias";
-									
-						$subcond .= $subcond ? ' OR ' : '';
-						$subcond .= "$name_link LIKE " . $dbo->quote('index.php?option=com_tags%');
-					}
-					
-					$dbo->setQuery("
-						SELECT 
-							$t1.$name_id,
-							$t1.$name_alias,
-							$t1.$name_catid,
-							$t1.$name_path,
-							$t1.$name_level,
-							$t1.$name_extension, 
-							$t1.$name_published
-						FROM (
-							$subquery
-						) AS $t1
-						LEFT JOIN $table_menu AS $t2 ON $t2.$name_path = $val_path
-							WHERE ($t2.$name_path IS null OR $t2.$name_published <> 1)
-								AND $t1.$name_language IN($val_language,$val_all)
-									AND $t1.$name_published > 0
-						ORDER BY $name_level DESC
-					");
-					
-					
-					if($list = $dbo->loadObjectList())
+					if(!count($currentRouteItems))
 					{	
-						$items = array();
-						$categories = array();
-						
-						foreach($list as $item)
+						if(!$catalias)
 						{
-							if(isset($item->path))
-							{
-								$categories[] = $item;
-							}
-							else
-							{
-								$items[] = $item;
-							}
-						}
-						
-						if($category = $this->getCategory($items, $categories, $catalias, $subcond))
-						{
-							$this->_sef = preg_replace('#(./)?(' . preg_quote($category->first_fragment, '#') . ')$#', '${1}' . $category->id . '-$2', $path);
-						}
-						elseif($catalias)
-						{
-							$categories = array_filter($categories, function($category) use ($catalias) {
-								return $category->alias === $catalias;
-							});
+							$menuItems = $this->_menu->getItems(
+								array(
+									'home', 
+									'language', 
+									'component'
+								), 
+								array(
+									'1', 
+									array($langTAG, '*'),
+									$options
+								)
+							);
 							
-							$filtered = array();
-							
-							if(count($categories))
+							if(count($menuItems))
 							{
-								foreach ($items as $item) {
-									foreach ($categories as $category) {
-										if (!$item->path && $item->catid == $category->id)
-										{
-											$item->path = $category->path;
-											$filtered[] = $item;
-										}
-									}
-								}
-							}
-							else
-							{
-								foreach ($items as $item) {
-									$item->path = $catalias;
-									$filtered[] = $item;
-								}
-							}
-							
-							if($item = $this->getCategory($items, $filtered, $catalias, $subcond, true))
-							{
-								if($item->first_fragment)
-								{
-									$pattern = '#(./)?(' . preg_quote($item->first_fragment, '#') . ')/([^/]+)$#';
-									$replacement = '${1}' . $item->catid . "-$2/{$item->id}-$3";
-								}
-								else
-								{
-									$pattern = '#([^/]+)$#';
-									$replacement = $item->id . '-$1';
-								}
-								
-								$this->_sef = preg_replace($pattern, $replacement, $path);
+								$this->_sef = $this->getPrimaryLevelSef($menuItems);
 							}
 						}
 						else
 						{
-							$dbo->setQuery("
-								SELECT $name_link
-									FROM $table_menu
-										WHERE $name_language IN($val_language,$val_all)
-											AND $name_home = 1
-												AND ($subcond)
-							");			
+							$primaryLevelSef = null;
+							$primaryLevelFragments = $fragments;
 							
-							if($menu_items = $dbo->loadObjectList())
+							array_pop($primaryLevelFragments);
+							$primaryLevelPath = implode("/", $primaryLevelFragments);
+							
+							if($fragments[0] === 'component')
 							{
-								foreach ($menu_items as $menu_item) {
-									foreach ($items as $item) {
-										if(strpos($menu_item->link, "&id=" . $item->catid))
+								$primaryLevelSef = $this->getPrimaryLevelSef(null);
+							}
+							else
+							{
+								$menuItems = $this->_menu->getItems(
+									array( 
+										'language', 
+										'component',
+										'route'
+									), 
+									array(
+										array($langTAG, '*'),
+										$options,
+										$primaryLevelPath
+									)
+								);
+								
+								if(count($menuItems))
+								{
+									$primaryLevelSef = $this->getPrimaryLevelSef($menuItems);
+								}
+							}
+							
+							if($primaryLevelSef)
+							{
+								$this->_sef = $primaryLevelPath . "/" . $primaryLevelSef;
+							}
+							else
+							{
+								$table_content = $dbo->quoteName('#__content');
+								$table_categories = $dbo->quoteName('#__categories');
+								$table_contact_details = $dbo->quoteName('#__contact_details');
+								$table_tags = $dbo->quoteName('#__tags');
+								$table_menu = $dbo->quoteName('#__menu');
+								
+								$name_id = $dbo->quoteName('id');
+								$name_catid = $dbo->quoteName('catid');
+								$name_parentid = $dbo->quoteName('parent_id');
+								$name_alias = $dbo->quoteName('alias');
+								$name_language = $dbo->quoteName('language');
+								$name_path = $dbo->quoteName('path');
+								$name_level = $dbo->quoteName('level');
+								$name_link = $dbo->quoteName('link');
+								$name_home = $dbo->quoteName('home');
+								$name_extension = $dbo->quoteName('extension');
+								$name_published = $dbo->quoteName('published');
+								$name_state = $dbo->quoteName('state');
+								
+								$val_alias = $dbo->quote($alias);
+								$val_com_content = $dbo->quote('com_content');
+								$val_com_contact = $dbo->quote('com_contact');
+								$val_com_tags = $dbo->quote('com_tags');
+								$val_path = $dbo->quote($path);
+								$val_catalias = $dbo->quote($catalias);
+								$val_language = $dbo->quote($langTAG);
+								$val_all = $dbo->quote('*');
+								
+								$t1 = $dbo->quoteName('t1');
+								$t2 = $dbo->quoteName('t2');
+								
+								$subquery = "";
+								$extensions = array();
+								
+								if($this->_options['com_content'])
+								{
+									$subquery = "SELECT 
+													$name_id, 
+													$name_language, 
+													$name_alias, 
+													$name_catid, 
+													null AS $name_path, 
+													null AS $name_extension, 
+													$name_state AS $name_published 
+											FROM $table_content 
+											WHERE $name_alias = $val_alias";
+											
+									$extensions[] = $val_com_content;
+								}
+								
+								if($this->_options['com_contact'])
+								{
+									if ($subquery) {
+										$subquery .= " UNION";
+									}
+									
+									$subquery .= " SELECT 
+													$name_id, 
+													$name_language, 
+													$name_alias, 
+													$name_catid, 
+													null AS $name_path, 
+													null AS $name_extension, 
+													$name_published 
+												FROM $table_contact_details 
+												WHERE $name_alias = $val_alias";
+												
+									$extensions[] = $val_com_contact;
+								}
+								
+								if($subquery)
+								{
+									$subquery .= " UNION SELECT 
+													$name_id, 
+													$name_language, 
+													$name_alias, 
+													null AS $name_catid, 
+													$name_path, 
+													$name_extension, 
+													$name_published 
+												FROM $table_categories 
+												WHERE $name_extension IN(" . implode(',', $extensions) . ") 
+												AND ($name_alias = $val_alias
+												OR $name_alias = $val_catalias)";
+								}
+								
+								if($this->_options['com_tags'])
+								{
+									if ($subquery) {
+										$subquery .= " UNION";
+									}
+									
+									$subquery .= " SELECT 
+													$name_id, 
+													$name_language, 
+													$name_alias, 
+													null AS $name_catid, 
+													$name_path,  
+													$val_com_tags AS $name_extension, 
+													$name_published
+												FROM $table_tags 
+												WHERE $name_alias = $val_alias";
+								}
+								
+								$dbo->setQuery("
+									SELECT 
+										$t1.$name_id,
+										$t1.$name_alias,
+										$t1.$name_catid,
+										$t1.$name_path,
+										$t1.$name_extension 
+									FROM (
+										$subquery
+									) AS $t1
+									WHERE $t1.$name_language IN($val_language,$val_all)
+									AND $t1.$name_published > 0
+								");
+								
+								if($list = $dbo->loadObjectList())
+								{	
+									$items = array();
+									$categories = array();
+									
+									foreach($list as $item)
+									{
+										if(isset($item->path))
 										{
-											$this->_sef = preg_replace("#([^/]+$)#", $item->id . "-$1", $path);
-											break 2;
+											$categories[] = $item;
 										}
+										else
+										{
+											$item->slug = $item->id . '-' . $item->alias;
+											$items[] = $item;
+										}
+									}
+									
+									if(!empty($categories))
+									{
+										$firstLevelCandidates = array_filter($categories, function($category) use ($alias) {
+											return $category->alias === $alias;
+										});
+										
+										if($bestCategoryCandidate = $this->filterCategories($firstLevelCandidates))
+										{
+											$this->_sef = $bestCategoryCandidate->catsef;
+										}
+										elseif(!empty($items))
+										{
+											$secondLevelCandidates = array_filter($categories, function($category) use ($catalias) {
+												return $category->alias === $catalias;
+											});
+											
+											if($bestCategoryCandidate = $this->filterCategories($secondLevelCandidates, true))
+											{
+												foreach ($items as $bestItemCandidate) {
+													if($bestCategoryCandidate->id == $bestItemCandidate->catid)
+													{
+														$this->_sef = $bestCategoryCandidate->catsef . '/' . $bestItemCandidate->slug;
+														break;
+													}
+												}
+											}
+										}
+										
 									}
 								}
 							}
@@ -347,8 +362,8 @@ class PlgSystemSefwizard extends JPlugin
 						{
 							$this->_router->attachParseRule(array($this, "parse"));
 						}
-						
 					}
+					
 				}
 			}
 			
@@ -360,6 +375,310 @@ class PlgSystemSefwizard extends JPlugin
 			}
 			
 		}
+		
+	}
+	
+	
+	PRIVATE FUNCTION getPrimaryLevelSef($menuItems)
+	{
+		$dbo = JFactory::getDbo();
+		
+		$table_content = $dbo->quoteName('#__content');
+		$table_categories = $dbo->quoteName('#__categories');
+		$table_contact_details = $dbo->quoteName('#__contact_details');
+		$table_tags = $dbo->quoteName('#__tags');
+		$t1 = $dbo->quoteName('t1');
+		
+		$name_id = $dbo->quoteName('id');
+		$name_catid = $dbo->quoteName('catid');
+		$name_parentid = $dbo->quoteName('parent_id');
+		$name_alias = $dbo->quoteName('alias');
+		$name_language = $dbo->quoteName('language');
+		$name_extension = $dbo->quoteName('extension');
+		$name_published = $dbo->quoteName('published');
+		$name_state = $dbo->quoteName('state');
+		
+		$name_element = $dbo->quoteName('element');
+		$val_element_article = $dbo->quote('com_content');
+		$val_element_contact = $dbo->quote('com_contact');
+		$val_element_tag = $dbo->quote('com_tags');
+		
+		$val_alias = $dbo->quote($this->_alias);
+		$val_language = $dbo->quote($this->_language);
+		$val_all = $dbo->quote('*');
+		$extensions = array();
+		$subquery = "";
+		
+		if($this->_options['com_content'])
+		{
+			$subquery .= "
+				SELECT 
+					$name_id,
+					$name_alias,
+					$name_catid AS $name_parentid, 
+					$name_language, 
+					$val_element_article AS $name_element, 
+					$name_state AS $name_published
+				FROM $table_content
+			";
+			$extensions[] = $dbo->quote('com_content');
+		}
+		
+		if($this->_options['com_contact'])
+		{
+			if($subquery)
+			{
+				$subquery .= " UNION ";
+			}
+			
+			$subquery .= "
+				SELECT 
+					$name_id,
+					$name_alias,
+					$name_catid AS $name_parentid, 
+					$name_language, 
+					$val_element_contact AS $name_element, 
+					$name_published
+				FROM $table_contact_details
+			";
+			$extensions[] = $dbo->quote('com_contact');
+		}
+		
+		if($subquery)
+		{
+			$subquery .= " UNION ";
+			$subquery .= "
+				SELECT 
+					$name_id,
+					$name_alias,
+					$name_parentid, 
+					$name_language, 
+					$name_extension AS $name_element, 
+					$name_published
+				FROM $table_categories
+				WHERE $name_extension IN(". implode(",", $extensions) .")
+			";
+		}
+		
+		if($this->_options['com_tags'])
+		{
+			if($subquery)
+			{
+				$subquery .= " UNION ";
+			}
+			
+			$subquery .= "
+				SELECT 
+					$name_id,
+					$name_alias,					
+					$name_parentid, 
+					$name_language, 
+					$val_element_tag AS $name_element, 
+					$name_published
+				FROM $table_tags
+			";
+			
+		}
+		
+		$dbo->setQuery("
+			SELECT
+				$name_id,
+				$name_parentid,
+				$name_language,
+				$name_element
+			FROM (
+				$subquery
+			) AS $t1
+			WHERE $t1.$name_alias = $val_alias
+			AND $t1.$name_language IN($val_language,$val_all)
+			AND $t1.$name_published > 0
+		");
+		
+		if($contentItems = $dbo->loadObjectList())
+		{
+			if($menuItems)
+			{
+				foreach ($menuItems as $menuItem) {
+					if (isset($menuItem->query['id']))
+					{
+						foreach ($contentItems as $contentItem)
+						{
+							if($contentItem->parent_id == $menuItem->query['id'] && 
+								$contentItem->language == $menuItem->language)
+							{
+								return $contentItem->id . "-" . $this->_alias;
+							}
+						}
+					}
+				}
+				
+				foreach ($menuItems as $menuItem) {
+					foreach ($contentItems as $contentItem) {
+						if($contentItem->element == $menuItem->component)
+						{
+							return $contentItem->id . "-" . $this->_alias;
+						}
+					}
+				}
+			}
+			else
+			{
+				return array_shift($contentItems)->id . "-" . $this->_alias;
+			}
+		}
+	}
+	
+	
+	PRIVATE FUNCTION matchMenuItems($menuItems, $categories)
+	{
+		foreach($menuItems as $menuItem)
+		{
+			if(isset($menuItem->query['id']))
+			{
+				foreach($categories as $category)
+				{
+					if($category->id == $menuItem->query['id'] && 
+						$category->language == $menuItem->language)
+					{
+						return $category;
+					}
+				}
+			}
+		}
+		
+		foreach($menuItems as $menuItem)
+		{
+			foreach($categories as $category)
+			{
+				if($category->extension == $menuItem->component)
+				{
+					return $category;
+				}
+			}
+		}
+	}
+	
+	
+	PRIVATE FUNCTION filterCategories($categories, $skip_first = false)
+	{
+		$menu_fragments = $this->_fragments;
+		$bestCategoryCandidate = null;
+		
+		if($skip_first)
+		{
+			array_pop($menu_fragments);
+		}
+		
+		$path_fragment = "";
+		$path_fragments = array();
+		$menu_fragments_num = count($menu_fragments);
+		
+		for($i = $menu_fragments_num - 1; $i >= 0; $i--)
+		{
+			$menuPath = implode('/', $menu_fragments);
+			
+			$menuItems = $this->_menu->getItems(
+				array(
+					'route', 
+					'language',
+					'home'
+				), 
+				array(
+					$menuPath, 
+					$this->_languages,
+					0
+				)
+			);
+			
+			if(count($menuItems))
+			{
+				if($bestCategoryCandidate = $this->matchMenuItems($menuItems, $categories))
+				{
+					break;
+				}
+			}
+			
+			$filtered = array();
+			
+			foreach($categories as $category)
+			{
+				if($this->strend($category->path, $menu_fragments[$i] . $path_fragment))
+				{
+					$filtered[] = $category;
+				}
+			}
+			
+			if(empty($filtered))
+			{
+				break;
+			}
+			
+			$categories = $filtered;
+			$path_fragment = '/' . $menu_fragments[$i] . $path_fragment;
+			array_unshift($path_fragments, array_pop($menu_fragments));
+			
+		}
+		
+		if(!$bestCategoryCandidate)
+		{
+			$menuPath = '';
+			
+			$menuItems = $this->_menu->getItems(
+				array(
+					'language',
+					'home'
+				), 
+				array( 
+					$this->_languages,
+					1
+				)
+			);
+			
+			$bestCategoryCandidate = $this->matchMenuItems($menuItems, $categories);
+		}
+		else
+		{
+			$menuPath .= '/';
+		}
+		
+		if($bestCategoryCandidate)
+		{
+			if($bestCategoryCandidate->extension === 'com_contact')
+			{
+				$level = count($path_fragments);
+				
+				if($level == 1)
+				{
+					$path_fragments[0] = $bestCategoryCandidate->id . '-' . $path_fragments[0];
+				}
+				else
+				{
+					$path_fragments = array_reverse($path_fragments);
+					$category = JCategories::getInstance('contact')->get($bestCategoryCandidate->id);
+					
+					foreach($path_fragments as $key => $fragment)
+					{
+						if($category)
+						{
+							$path_fragments[$key] = $category->id . '-' . $fragment;
+							$category = $category->getParent();
+						}
+					}
+					
+					$path_fragments = array_reverse($path_fragments);
+					
+				}
+				
+				$bestCategoryCandidate->catsef = $menuPath . implode('/', $path_fragments);
+				
+			}
+			elseif($bestCategoryCandidate->extension === 'com_content')
+			{
+				$bestCategoryCandidate->catsef = $menuPath . $bestCategoryCandidate->id . '-' . implode('/', $path_fragments);
+			}
+		}
+		
+		return $bestCategoryCandidate;
 		
 	}
 	
@@ -420,7 +739,7 @@ class PlgSystemSefwizard extends JPlugin
 						
 						if(!$menuitem->home)
 						{
-							$offset = strlen($route) + 1;
+							$offset = strlen($menuitem->route);
 						}
 						
 					}
@@ -566,180 +885,6 @@ class PlgSystemSefwizard extends JPlugin
 			}
 			
 			$app->setBody($html);
-		}
-		
-	}
-	
-	
-	PRIVATE FUNCTION getCategory($items, $categories, $catalias, $subcond, $skip_first = false)
-	{
-		if(!empty($categories))
-		{
-			$category = null;
-			
-			$path_fragment = "";
-			$path_fragments = array();
-			
-			$menu_fragments = $this->_fragments;
-			
-			if($skip_first)
-			{
-				array_pop($menu_fragments);
-			}
-			
-			$menu_fragments_num = count($menu_fragments);
-			
-			for($i = $menu_fragments_num - 1; $i >= 0; $i--)
-			{
-				$filtered = array();
-				$fragment = $menu_fragments[$i];
-				
-				foreach($categories as $ctg)
-				{
-					if($this->strend($ctg->path, $fragment . $path_fragment))
-					{
-						$filtered[] = $ctg;
-					}
-				}
-				
-				array_unshift($path_fragments, array_pop($menu_fragments));
-				
-				if(!count($filtered))
-				{
-					break;
-				}
-				
-				$categories = $filtered;
-				$path_fragment = '/' . $fragment . $path_fragment;
-				
-			}
-			
-			if($path_fragment)
-			{
-				if(!count($menu_fragments))
-				{
-					$menu_fragments[] = $path_fragments[0];
-				}
-				
-				if($menu_fragments[0] !== 'component')
-				{
-					$computed_menu_path = implode('/', $menu_fragments);
-					
-					$dbo = JFactory::getDbo();
-					$name_link = $dbo->quoteName('link');
-					$name_level = $dbo->quoteName('level');
-					$name_lang = $dbo->quoteName('language');
-					$name_published = $dbo->quoteName('published');
-					$name_path = $dbo->quoteName('path');
-					$name_home = $dbo->quoteName('home');
-					
-					$val_all = $dbo->quote('*');
-					$val_lang = $dbo->quote($this->_language);
-					$val_computed_menu_path = $dbo->quote($computed_menu_path);
-					
-					$table_menu = $dbo->quoteName('#__menu');
-					
-					$dbo->setQuery("
-						SELECT $name_link, $name_level, $name_path, $name_home
-						FROM $table_menu
-						WHERE $name_lang IN($val_lang,$val_all)
-						AND $name_published = 1
-						AND (
-							$name_path = $val_computed_menu_path
-							OR ($name_home = 1 AND ($subcond))
-						)
-						ORDER BY $name_home
-					");
-					
-					if($menuitem = $dbo->loadObject())
-					{
-						if(!$menuitem->home)
-						{
-							array_shift($path_fragments);
-						}
-						else
-						{
-							$menuitem->level -= 1;
-						}
-						
-						$categories = array_filter($categories, function($category) use ($menuitem) {
-							return strpos($menuitem->link, "option=" . $category->extension);
-						});
-						
-						if(count($categories) > 1)
-						{
-							if(preg_match("#.+?([\d]+)$#", $menuitem->link, $matches))
-							{
-								$name_alias = $dbo->quoteName('alias');
-								$table_categories = $dbo->quoteName('#__categories');
-								$name_id = $dbo->quoteName('id');
-								$val_id = (int) $matches[1];
-								
-								$dbo->setQuery("
-									SELECT $name_alias
-									FROM $table_categories
-									WHERE $name_id = $val_id
-									AND $name_published = 1
-									AND $name_lang IN($val_lang,$val_all)
-								");
-								
-								if($parent_catalias = $dbo->loadResult())
-								{
-									$categories = array_filter($categories, function($category) use ($parent_catalias, $val_id)
-									{
-										return strpos('/' . $category->path, '/' . $parent_catalias . '/') !== false || 
-											$category->catid == $val_id;
-									});
-								}
-							}
-						}
-						
-						if(count($categories) > 1)
-						{
-							$categories = array_filter($categories, function($category) use ($menuitem, $menu_fragments_num)
-							{
-								return $category->level + $menuitem->level - 1 === $menu_fragments_num;
-							});
-						}
-						
-						if(!count($categories))
-						{
-							return null;
-						}
-					}
-				}
-				elseif(count($path_fragments) > 1)
-				{
-					array_shift($path_fragments);
-				}
-				
-				$category = array_shift($categories);
-				
-				if(empty($path_fragments) && $category->extension)
-				{
-					$path_fragments[] = array_shift($menu_fragments);
-				}
-				
-				$category->first_fragment = $category->extension === 'com_tags' ? 
-					array_pop($path_fragments) : implode('/', $path_fragments);
-				
-				
-				if($catalias)
-				{
-					foreach($items as $item)
-					{
-						if($item->alias === $catalias && $item->catid == $category->id && 
-							$this->strend($category->first_fragment, $category->path))
-						{
-							return null;
-						}
-					}
-				}
-				
-			}
-			
-			return $category;
-			
 		}
 		
 	}
