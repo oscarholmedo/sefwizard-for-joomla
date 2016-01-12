@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.0.7
+/* SEF Wizard extension for Joomla 3.x - Version 1.1
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -25,9 +25,11 @@ class PlgSystemSefwizard extends JPlugin
 		$_debug = false,
 		$_execute = false,
 		$_language = '',
-		$_fragments = array(),
 		$_menu = null,
-		$_rootlen = 0;
+		$_rootlen = 0,
+		$_alias = '',
+		$_menuItemCandidates = array(),
+		$_homePageCandidates = array();
 		
 	
 	PUBLIC FUNCTION onAfterInitialise()
@@ -84,8 +86,7 @@ class PlgSystemSefwizard extends JPlugin
 			}
 			
 			$fragments = explode("/", $path);
-			$fragments = array_filter($fragments);
-			$fragments = array_values($fragments);
+			$fragments = array_values(array_filter($fragments));
 			
 			if(isset($fragments[0]))
 			{
@@ -111,81 +112,103 @@ class PlgSystemSefwizard extends JPlugin
 					$catalias = isset($fragments[$level-2]) ? $fragments[$level-2] : '';
 					$path = implode('/', $fragments);
 					
+					$languages = array($langTAG, '*');
 					$this->_language = $langTAG;
-					$this->_languages = array($langTAG, '*');
-					$this->_fragments = $fragments;
 					$this->_alias = $alias;
-					$this->_catalias = $catalias;
 					
-					$excludeParameters = array('route', 'language');
-					$excludeValues = array($path, $this->_languages);
+					$attributes = array('route', 'language');
+					$attributeValues = array($path, $languages);
 					
 					if(!$catalias)
 					{
-						$excludeParameters[] = 'home';
-						$excludeValues[] = 0;
+						$attributes[] = 'home';
+						$attributeValues[] = 0;
 					}
 					
-					$currentRouteItems = $this->_menu->getItems($excludeParameters, $excludeValues);
+					$menuItemsMatchingRoute = $this->_menu->getItems($attributes, $attributeValues);
 					
-					if(!count($currentRouteItems))
-					{	
+					if(empty($menuItemsMatchingRoute))
+					{
+						$routes = array($fragments[0]);
+						$menuFragments = array($fragments[$level-1]);
+						
+						for($i=1; $i<$level; $i++)
+						{
+							$routes[] = $routes[$i-1] . '/' . $fragments[$i];
+							$menuFragments[] = $fragments[$level-$i-1] . '/' . $menuFragments[$i-1];
+						}
+						
+						$routes = array_reverse($routes);
+						
+						$menuItems = $this->_menu->getItems(
+							array('language', 'component'), 
+							array($languages, $options)
+						);
+						
+						$primaryLevelMenuItemCandidates = array();
+						$menuItemCandidates = array();
+						$homePageCandidates = array();
+						$categoryFragments = array();
+						$menuFragments = array();
+						
+						foreach($menuItems as $menuItem)
+						{
+							if($menuItem->home)
+							{
+								$homePageCandidates[] = $menuItem;
+							}
+							elseif(in_array($menuItem->route, $routes))
+							{
+								if($catalias && $menuItem->route === $routes[1])
+								{
+									$primaryLevelMenuItemCandidates[] = $menuItem;
+								}
+								$menuItemCandidates[] = $menuItem;
+							}
+						}
+						
+						if(!empty($menuItemCandidates))
+						{
+							usort($menuItemCandidates, function($a, $b) {
+								return $a->level < $b->level;
+							});
+							for($i = $menuItemCandidates[0]->level; $i < $level; $i++)
+							{
+								$categoryFragments[] = $fragments[$i];
+							}
+							$menuFragments = explode('/', $menuItemCandidates[0]->route);
+						}
+						else
+						{
+							$categoryFragments = $fragments;
+						}
+						
+						$this->_menuItemCandidates = $menuItemCandidates;
+						$this->_homePageCandidates = $homePageCandidates;
+						
 						if(!$catalias)
 						{
-							$menuItems = $this->_menu->getItems(
-								array(
-									'home', 
-									'language', 
-									'component'
-								), 
-								array(
-									'1', 
-									array($langTAG, '*'),
-									$options
-								)
-							);
-							
-							if(count($menuItems))
+							if(count($homePageCandidates))
 							{
-								$this->_sef = $this->getPrimaryLevelSef($menuItems);
+								$this->_sef = $this->getPrimaryLevelSef($homePageCandidates);
 							}
 						}
 						else
 						{
 							$primaryLevelSef = null;
-							$primaryLevelFragments = $fragments;
-							
-							array_pop($primaryLevelFragments);
-							$primaryLevelPath = implode("/", $primaryLevelFragments);
 							
 							if($fragments[0] === 'component')
 							{
 								$primaryLevelSef = $this->getPrimaryLevelSef(null);
 							}
-							else
-							{
-								$menuItems = $this->_menu->getItems(
-									array( 
-										'language', 
-										'component',
-										'route'
-									), 
-									array(
-										array($langTAG, '*'),
-										$options,
-										$primaryLevelPath
-									)
-								);
-								
-								if(count($menuItems))
-								{
-									$primaryLevelSef = $this->getPrimaryLevelSef($menuItems);
-								}
+							elseif(count($primaryLevelMenuItemCandidates))
+							{	
+								$primaryLevelSef = $this->getPrimaryLevelSef($primaryLevelMenuItemCandidates);
 							}
 							
 							if($primaryLevelSef)
 							{
-								$this->_sef = $primaryLevelPath . "/" . $primaryLevelSef;
+								$this->_sef = $routes[1] . "/" . $primaryLevelSef; 
 							}
 							else
 							{
@@ -265,14 +288,15 @@ class PlgSystemSefwizard extends JPlugin
 													$name_id, 
 													$name_language, 
 													$name_alias, 
-													null AS $name_catid, 
+													$name_parentid AS $name_catid, 
 													$name_path, 
 													$name_extension, 
 													$name_published 
 												FROM $table_categories 
 												WHERE $name_extension IN(" . implode(',', $extensions) . ") 
-												AND ($name_alias = $val_alias
-												OR $name_alias = $val_catalias)";
+												AND (
+													$name_alias = $val_alias OR $name_alias = $val_catalias
+												)";
 								}
 								
 								if($this->_options['com_tags'])
@@ -285,7 +309,7 @@ class PlgSystemSefwizard extends JPlugin
 													$name_id, 
 													$name_language, 
 													$name_alias, 
-													null AS $name_catid, 
+													$name_parentid AS $name_catid, 
 													$name_path,  
 													$val_com_tags AS $name_extension, 
 													$name_published
@@ -293,13 +317,30 @@ class PlgSystemSefwizard extends JPlugin
 												WHERE $name_alias = $val_alias";
 								}
 								
+								$primaryLevelCategoryFragments = $categoryFragments;
+								$primaryLevelCategoryFragment = implode('/', $categoryFragments);
+								
+								if(count($categoryFragments) > 2)
+								{
+									array_pop($categoryFragments);
+									
+									$secondaryLevelCategoryFragments = $categoryFragments;
+									$secondaryLevelCategoryFragment = implode('/', $categoryFragments);
+								}
+								else
+								{
+									$secondaryLevelCategoryFragments = array($catalias);
+									$secondaryLevelCategoryFragment = $catalias;
+								}
+								
 								$dbo->setQuery("
 									SELECT 
-										$t1.$name_id,
-										$t1.$name_alias,
-										$t1.$name_catid,
-										$t1.$name_path,
-										$t1.$name_extension 
+										$name_id,
+										$name_alias,
+										$name_catid,
+										$name_path,
+										$name_extension,
+										$name_language
 									FROM (
 										$subquery
 									) AS $t1
@@ -310,13 +351,24 @@ class PlgSystemSefwizard extends JPlugin
 								if($list = $dbo->loadObjectList())
 								{	
 									$items = array();
-									$categories = array();
+									
+									$primaryLevelCategories = array();
+									$secondaryLevelCategories = array();
 									
 									foreach($list as $item)
 									{
 										if(isset($item->path))
 										{
-											$categories[] = $item;
+											$item->ancestorChain = array();
+											
+											if($this->strend($item->path, $primaryLevelCategoryFragment))
+											{
+												$primaryLevelCategories[] = $item;
+											}
+											if($this->strend($item->path, $secondaryLevelCategoryFragment))
+											{
+												$secondaryLevelCategories[] = $item;
+											}
 										}
 										else
 										{
@@ -325,34 +377,23 @@ class PlgSystemSefwizard extends JPlugin
 										}
 									}
 									
-									if(!empty($categories))
+									if($bestCategoryCandidate = $this->filterCategories($primaryLevelCategories, $primaryLevelCategoryFragments, $menuFragments))
 									{
-										$firstLevelCandidates = array_filter($categories, function($category) use ($alias) {
-											return $category->alias === $alias;
-										});
-										
-										if($bestCategoryCandidate = $this->filterCategories($firstLevelCandidates))
+										$this->_sef = $bestCategoryCandidate->catsef;
+									}
+									elseif(!empty($items))
+									{
+										if($bestCategoryCandidate = $this->filterCategories($secondaryLevelCategories, $secondaryLevelCategoryFragments, $menuFragments))
 										{
-											$this->_sef = $bestCategoryCandidate->catsef;
-										}
-										elseif(!empty($items))
-										{
-											$secondLevelCandidates = array_filter($categories, function($category) use ($catalias) {
-												return $category->alias === $catalias;
-											});
-											
-											if($bestCategoryCandidate = $this->filterCategories($secondLevelCandidates, true))
+											foreach($items as $bestItemCandidate)
 											{
-												foreach ($items as $bestItemCandidate) {
-													if($bestCategoryCandidate->id == $bestItemCandidate->catid)
-													{
-														$this->_sef = $bestCategoryCandidate->catsef . '/' . $bestItemCandidate->slug;
-														break;
-													}
+												if($bestCategoryCandidate->id == $bestItemCandidate->catid)
+												{
+													$this->_sef = $bestCategoryCandidate->catsef . '/' . $bestItemCandidate->slug;
+													break;
 												}
 											}
 										}
-										
 									}
 								}
 							}
@@ -498,13 +539,13 @@ class PlgSystemSefwizard extends JPlugin
 		{
 			if($menuItems)
 			{
-				foreach ($menuItems as $menuItem) {
-					if (isset($menuItem->query['id']))
+				foreach($menuItems as $menuItem)
+				{
+					if(isset($menuItem->query['id']))
 					{
 						foreach ($contentItems as $contentItem)
 						{
-							if($contentItem->parent_id == $menuItem->query['id'] && 
-								$contentItem->language == $menuItem->language)
+							if($contentItem->parent_id == $menuItem->query['id'])
 							{
 								return $contentItem->id . "-" . $this->_alias;
 							}
@@ -512,8 +553,10 @@ class PlgSystemSefwizard extends JPlugin
 					}
 				}
 				
-				foreach ($menuItems as $menuItem) {
-					foreach ($contentItems as $contentItem) {
+				foreach($menuItems as $menuItem)
+				{
+					foreach($contentItems as $contentItem)
+					{
 						if($contentItem->element == $menuItem->component)
 						{
 							return $contentItem->id . "-" . $this->_alias;
@@ -529,153 +572,230 @@ class PlgSystemSefwizard extends JPlugin
 	}
 	
 	
-	PRIVATE FUNCTION matchMenuItems($menuItems, $categories)
+	PRIVATE FUNCTION matchMenuItems($menuItems, $categories, $level)
 	{
-		foreach($menuItems as $menuItem)
+		if(!empty($menuItems))
 		{
-			if(isset($menuItem->query['id']))
+			if(count($categories) === 1)
 			{
-				foreach($categories as $category)
+				if($level <= 2 || $categories[0]->extension !== 'com_contact')
 				{
-					if($category->id == $menuItem->query['id'] && 
-						$category->language == $menuItem->language)
+					if($level === 2)
 					{
-						return $category;
+						$categories[0]->ancestorChain[] = $categories[0]->catid;
+					}
+					
+					$categories[0]->ancestorChain[] = $categories[0]->id;
+					return $categories[0];
+					
+				}
+			}
+			
+			$dbo = JFactory::getDbo();
+			
+			$name_id = $dbo->quoteName('id');
+			$name_parentid = $dbo->quoteName('parent_id');
+			$name_path = $dbo->quoteName('path');
+			$table_categories = $dbo->quoteName('#__categories');
+			$t1 = $dbo->quoteName('t1');
+			
+			foreach($menuItems as $menuItem)
+			{
+				if(isset($menuItem->query['id']))
+				{
+					$select = array();
+					$join = array();
+					
+					for($i = 1; $i <= $level; $i++)
+					{
+						$idx = $i;
+						$next = $i+1;
+						
+						$tblcur = $dbo->quoteName("t$idx");
+						$tblnext = $dbo->quoteName("t$next");
+						
+						$select[] = "
+							$tblcur.$name_id, $tblcur.$name_path
+						";
+						
+						if($i < $level)
+						{
+							$join[] = "
+								INNER JOIN $table_categories AS $tblnext ON $tblcur.$name_id = $tblnext.$name_parentid
+							";
+						}
+					}
+					
+					$dbo->setQuery("
+						SELECT " . implode(',', $select) . 
+							" FROM $table_categories AS $t1 " . 
+								implode(' ', $join) . 
+									" WHERE $t1.$name_parentid = " . (int) $menuItem->query['id']
+					);
+					
+					if($descendants = $dbo->loadRowList())
+					{
+						foreach($descendants as $descendant)
+						{
+							$descendantPath = array_pop($descendant);
+							$descendantID = array_pop($descendant);
+							
+							foreach($categories as $category)
+							{
+								if($descendantID == $category->id &&
+									$descendantPath == $category->path)
+								{
+									foreach($descendant as $key => $val)
+									{
+										if($key % 2 === 0)
+										{
+											$category->ancestorChain[] = $val;
+										}
+									}
+									
+									$category->ancestorChain[] = $descendantID;
+									return $category;
+									
+								}
+							}
+						}
 					}
 				}
 			}
-		}
-		
-		foreach($menuItems as $menuItem)
-		{
-			foreach($categories as $category)
+			
+			foreach($menuItems as $menuItem)
 			{
-				if($category->extension == $menuItem->component)
+				foreach($categories as $category)
 				{
-					return $category;
+					if($menuItem->component === $category->extension)
+					{
+						if($category->extension === 'com_contact')
+						{
+							if($level >= 2)
+							{
+								if($level > 2)
+								{
+									$select = array();
+									$join = array();
+									
+									for($i = 1; $i <= $level - 2; $i++)
+									{
+										$idx = $i;
+										$next = $i+1;
+										
+										$tblcur = $dbo->quoteName("t$idx");
+										$tblnext = $dbo->quoteName("t$next");
+										
+										$select[] = "
+											$tblcur.$name_parentid
+										";
+										
+										if($i < $level)
+										{
+											$join[] = "
+												INNER JOIN $table_categories AS $tblnext ON $tblcur.$name_parentid = $tblnext.$name_id
+											";
+										}
+									}
+									
+									$dbo->setQuery("
+										SELECT " . implode(',', $select) . 
+											" FROM $table_categories AS $t1 " . 
+												implode(' ', $join) . 
+													" WHERE $t1.$name_id = " . (int) $category->catid
+									);
+									
+									if($descendants = $dbo->loadRow())
+									{
+										foreach($descendants as $key => $descendant)
+										{
+											array_unshift($category->ancestorChain, $descendant);
+										}
+									}
+									
+									if(!$descendants || count($category->ancestorChain) !== $level - 2)
+									{
+										return null;
+									}
+									
+								}
+								
+								$category->ancestorChain[] = $category->catid;
+								
+							}
+							
+							$category->ancestorChain[] = $category->id;
+							
+						}
+						
+						return $category;
+						
+					}
 				}
 			}
 		}
 	}
 	
 	
-	PRIVATE FUNCTION filterCategories($categories, $skip_first = false)
+	PRIVATE FUNCTION filterCategories($categories, $categoryFragments, $menuFragments)
 	{
-		$menu_fragments = $this->_fragments;
 		$bestCategoryCandidate = null;
 		
-		if($skip_first)
+		if(!empty($menuFragments))
 		{
-			array_pop($menu_fragments);
-		}
-		
-		$path_fragment = "";
-		$path_fragments = array();
-		$menu_fragments_num = count($menu_fragments);
-		
-		for($i = $menu_fragments_num - 1; $i >= 0; $i--)
-		{
-			$menuPath = implode('/', $menu_fragments);
-			
-			$menuItems = $this->_menu->getItems(
-				array(
-					'route', 
-					'language',
-					'home'
-				), 
-				array(
-					$menuPath, 
-					$this->_languages,
-					0
-				)
-			);
-			
-			if(count($menuItems))
+			while(!empty($categories) && !empty($menuFragments))
 			{
-				if($bestCategoryCandidate = $this->matchMenuItems($menuItems, $categories))
+				$menuRoute = implode($menuFragments, '/');
+				$level = count($categoryFragments);
+				
+				$menuItems = array_filter($this->_menuItemCandidates, function($menuItem) use ($menuRoute) {
+					return $menuItem->route === $menuRoute;
+				});
+				
+				if($bestCategoryCandidate = $this->matchMenuItems($menuItems, $categories, $level))
 				{
 					break;
 				}
-			}
-			
-			$filtered = array();
-			
-			foreach($categories as $category)
-			{
-				if($this->strend($category->path, $menu_fragments[$i] . $path_fragment))
+				else
 				{
-					$filtered[] = $category;
+					array_unshift($categoryFragments, $menuFragments);
+					$categoryFragment = implode('/', $menuFragments);
+					$filtered = array();
+					
+					foreach($categories as $category)
+					{
+						if($this->strend($category->path, $categoryFragment))
+						{
+							$filtered[] = $category;
+						}
+					}
+					
+					$categories = $filtered;
+					
 				}
 			}
-			
-			if(empty($filtered))
-			{
-				break;
-			}
-			
-			$categories = $filtered;
-			$path_fragment = '/' . $menu_fragments[$i] . $path_fragment;
-			array_unshift($path_fragments, array_pop($menu_fragments));
-			
 		}
-		
-		if(!$bestCategoryCandidate)
+		elseif(!empty($categories))
 		{
-			$menuPath = '';
-			
-			$menuItems = $this->_menu->getItems(
-				array(
-					'language',
-					'home'
-				), 
-				array( 
-					$this->_languages,
-					1
-				)
-			);
-			
-			$bestCategoryCandidate = $this->matchMenuItems($menuItems, $categories);
-		}
-		else
-		{
-			$menuPath .= '/';
+			$level = count($categoryFragments);
+			$bestCategoryCandidate = $this->matchMenuItems($this->_homePageCandidates, $categories, $level);
 		}
 		
 		if($bestCategoryCandidate)
 		{
 			if($bestCategoryCandidate->extension === 'com_contact')
 			{
-				$level = count($path_fragments);
-				
-				if($level == 1)
+				foreach($categoryFragments as $key => &$fragment)
 				{
-					$path_fragments[0] = $bestCategoryCandidate->id . '-' . $path_fragments[0];
+					$fragment = $bestCategoryCandidate->ancestorChain[$key] . '-' . $fragment;
 				}
-				else
-				{
-					$path_fragments = array_reverse($path_fragments);
-					$category = JCategories::getInstance('contact')->get($bestCategoryCandidate->id);
-					
-					foreach($path_fragments as $key => $fragment)
-					{
-						if($category)
-						{
-							$path_fragments[$key] = $category->id . '-' . $fragment;
-							$category = $category->getParent();
-						}
-					}
-					
-					$path_fragments = array_reverse($path_fragments);
-					
-				}
-				
-				$bestCategoryCandidate->catsef = $menuPath . implode('/', $path_fragments);
-				
 			}
-			elseif($bestCategoryCandidate->extension === 'com_content')
+			else
 			{
-				$bestCategoryCandidate->catsef = $menuPath . $bestCategoryCandidate->id . '-' . implode('/', $path_fragments);
+				$categoryFragments[0] = $bestCategoryCandidate->id . '-' . $categoryFragments[0];
 			}
+			
+			$bestCategoryCandidate->catsef = implode('/', array_merge($menuFragments, $categoryFragments));
 		}
 		
 		return $bestCategoryCandidate;
