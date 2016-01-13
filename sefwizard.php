@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.1
+/* SEF Wizard extension for Joomla 3.x - Version 1.1.1
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -17,6 +17,7 @@ defined('_JEXEC') or die('Restricted access');
 class PlgSystemSefwizard extends JPlugin
 {
 	PRIVATE
+		$_JLegacy = false,
 		$_sef = "",
 		$_router = null,
 		$_sefRewrite = false,
@@ -39,9 +40,10 @@ class PlgSystemSefwizard extends JPlugin
 		
 		if($app->isSite() && $config->get('sef'))
 		{	
+			$this->_JLegacy = version_compare(JVERSION, '3.0', '<');
 			$this->_options["com_content"] = $this->params->get("com_content") ? "com_content" : "";
 			$this->_options["com_contact"] = $this->params->get("com_contact") ? "com_contact" : "";
-			$this->_options["com_tags"] = $this->params->get("com_tags") ? "com_tags" : "";
+			$this->_options["com_tags"] = !$this->_JLegacy && $this->params->get("com_tags") ? "com_tags" : "";
 			
 			$options = array_filter($this->_options);
 			
@@ -806,13 +808,12 @@ class PlgSystemSefwizard extends JPlugin
 	PUBLIC FUNCTION parse(&$router, &$uri)
 	{
 		$uri->setPath($this->_sef);
+		return array();
 	}
 	
 	
 	PUBLIC FUNCTION build(&$siteRouter, &$uri)
 	{
-		$vars = array();
-		
 		if(spl_object_hash($siteRouter) === spl_object_hash($this->_router))
 		{
 			$query = $uri->getQuery(true);
@@ -910,7 +911,7 @@ class PlgSystemSefwizard extends JPlugin
 			}
 		}
 		
-		return $vars;
+		return array();
 	}
 	
 	
@@ -989,24 +990,17 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PUBLIC FUNCTION onAfterRender()
 	{
-		if($this->_execute)
+		if($this->_execute && $this->_debug)
 		{
-			if($this->_debug)
-			{
-				$this->script_execution_time("start");
-			}
+			$this->script_execution_time("start");
 			
 			$app = JFactory::getApplication();
-			$html = $app->getBody();
 			
-			if($this->_debug)
-			{
-				$html = $this->script_execution_time("end", "onAfterRender", $html);
-			}
+			$html = !$this->_JLegacy ? $app->getBody() : JResponse::getBody();
+			$html = $this->script_execution_time("end", "onAfterRender", $html);
 			
-			$app->setBody($html);
+			!$this->_JLegacy ? $app->setBody($html) : JResponse::setBody($html);
 		}
-		
 	}
 	
 	

@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x - Version 1.1
+/* SEF Wizard extension for Joomla 3.x - Version 1.1.1
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -20,9 +20,15 @@ class PlgSystemSefwizardInstallerScript
 	{
 		$app = JFactory::getApplication();
 		
-		if(version_compare(JVERSION, '3.4.8', '<'))
+		if(version_compare(JVERSION, '2.5', '<'))
 		{
 			$app->redirect(JURI::getInstance()->toString(), JText::_('PLG_SEFWIZARD_JOOMLA_VERSION_CHECK_FAILURE'), 'error');
+			return false;
+		}
+		
+		if(version_compare(PHP_VERSION, '5.3', '<'))
+		{
+			$app->redirect(JURI::getInstance()->toString(), JText::_('PLG_SEFWIZARD_PHP_VERSION_CHECK_FAILURE'), 'error');
 			return false;
 		}
 		
