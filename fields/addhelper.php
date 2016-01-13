@@ -20,13 +20,14 @@ class JFormFieldAddhelper extends JFormField
 	
 	protected function getInput()
 	{
+		$doc = JFactory::getDocument();
 		$language = JFactory::getLanguage()->getName() === "Russian";
 		
 		$donatePPID = $language === "Russian" ? "D6CR8WY5NAWHS" : "5CNAKEVMSUT3Q";
 		$donatePPURL = "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id={$donatePPID}";
 		$ppImg = JURI::root(true) . "/plugins/system/sefwizard/assets/ppbtn_donate.jpg";
 		
-		JFactory::getDocument()->addStyleDeclaration("
+		$doc->addStyleDeclaration("
 			#general .add-spacer {
 				text-transform: uppercase !important;
 			}
@@ -37,6 +38,15 @@ class JFormFieldAddhelper extends JFormField
 				color: red !important;
 			}
 		");
+		
+		if(version_compare(JVERSION, '3.0', '<'))
+		{
+			$doc->addStyleDeclaration("
+				#jform_params_com_tags-lbl, #jform_params_com_tags {
+					display: none !important;
+				}
+			");
+		}
 		
 		$html = "<a href='{$donatePPURL}' target='_blank'><img src='{$ppImg}' alt='' width='135' height='31' /></a>";
 		
