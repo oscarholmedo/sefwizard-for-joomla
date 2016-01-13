@@ -758,8 +758,8 @@ class PlgSystemSefwizard extends JPlugin
 				}
 				else
 				{
-					array_unshift($categoryFragments, $menuFragments);
-					$categoryFragment = implode('/', $menuFragments);
+					array_unshift($categoryFragments, array_pop($menuFragments));
+					$categoryFragment = implode('/', $categoryFragments);
 					$filtered = array();
 					
 					foreach($categories as $category)
