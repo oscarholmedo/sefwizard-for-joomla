@@ -82,10 +82,10 @@
 					<option value="2">PLG_SEFWIZARD_DEBUG_PAGE</option>
 				</field>
 			</fieldset>
+			<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT" addfieldpath="/plugins/system/sefwizard/fields/">
+				<field type="addhelper" />
+			</fieldset>
 		</fields>
-		<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT" addfieldpath="/plugins/system/sefwizard/fields/">
-			<field type="addhelper" />
-		</fieldset>
 	</config>
 	<updateservers>
 		<server type="extension" priority="1" name="SEF Wizard update server">http://addondev.com/support/updates/sefwizard.xml</server>

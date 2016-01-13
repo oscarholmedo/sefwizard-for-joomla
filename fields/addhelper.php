@@ -33,7 +33,7 @@ class JFormFieldAddhelper extends JFormField
 			#attrib-donate .control-group .controls {
 				margin: 0 !important;
 			}
-			li a[href='#attrib-donate'] {
+			li a[href='#attrib-donate'], #donate-options a {
 				color: red !important;
 			}
 		");
