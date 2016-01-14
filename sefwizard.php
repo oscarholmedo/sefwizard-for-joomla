@@ -19,12 +19,13 @@ class PlgSystemSefwizard extends JPlugin
 	PRIVATE
 		$_JLegacy = false,
 		$_execute = false,
+		$_uri = array(),
 		$_scriptExecutionTime = false,
 		$_showRouterVariables = false,
 		$_sefRewrite = false,
 		$_sefSuffix = false,
 		$_rootlen = 0,
-		$_sef = "",
+		$_sef = '',
 		$_router = null,
 		$_options = array(),
 		$_language = '',
@@ -40,11 +41,13 @@ class PlgSystemSefwizard extends JPlugin
 		$config = JFactory::getConfig();
 		
 		if($app->isSite() && $config->get('sef'))
-		{	
+		{
 			$this->_JLegacy = version_compare(JVERSION, '3.0', '<');
-			$this->_options["com_content"] = $this->params->get("com_content") ? "com_content" : "";
-			$this->_options["com_contact"] = $this->params->get("com_contact") ? "com_contact" : "";
-			$this->_options["com_tags"] = !$this->_JLegacy && $this->params->get("com_tags") ? "com_tags" : "";
+			$this->_showRouterVariables = $this->params->get('show_router_variables');
+			
+			$this->_options['com_content'] = $this->params->get('com_content') ? 'com_content' : '';
+			$this->_options['com_contact'] = $this->params->get('com_contact') ? 'com_contact' : '';
+			$this->_options['com_tags'] = !$this->_JLegacy && $this->params->get('com_tags') ? 'com_tags' : '';
 			
 			$options = array_filter($this->_options);
 			
@@ -58,9 +61,9 @@ class PlgSystemSefwizard extends JPlugin
 			$this->_sefRewrite = $config->get('sef_rewrite');
 			$this->_menu = $app->getMenu();
 			
-			if($this->_scriptExecutionTime = $this->params->get("scriptExecutionTime"))
+			if($this->_scriptExecutionTime = $this->params->get('script_execution_time'))
 			{
-				$this->script_execution_time("start");
+				$this->script_execution_time('start');
 			}
 			
 			$dbo = JFactory::getDbo();
@@ -88,7 +91,7 @@ class PlgSystemSefwizard extends JPlugin
 				}
 			}
 			
-			$fragments = explode("/", $path);
+			$fragments = explode('/', $path);
 			$fragments = array_values(array_filter($fragments));
 			
 			if(isset($fragments[0]))
@@ -211,7 +214,7 @@ class PlgSystemSefwizard extends JPlugin
 							
 							if($primaryLevelSef)
 							{
-								$this->_sef = $routes[1] . "/" . $primaryLevelSef; 
+								$this->_sef = $routes[1] . '/' . $primaryLevelSef; 
 							}
 							else
 							{
@@ -246,7 +249,7 @@ class PlgSystemSefwizard extends JPlugin
 								$t1 = $dbo->quoteName('t1');
 								$t2 = $dbo->quoteName('t2');
 								
-								$subquery = "";
+								$subquery = '';
 								$extensions = array();
 								
 								if($this->_options['com_content'])
@@ -404,18 +407,18 @@ class PlgSystemSefwizard extends JPlugin
 						
 						if($this->_sef)
 						{
-							$this->_router->attachParseRule(array($this, "parse"));
+							$this->_router->attachParseRule(array($this, 'parse'));
 						}
 					}
 					
 				}
 			}
 			
-			$this->_router->attachBuildRule(array($this, "build"));
+			$this->_router->attachBuildRule(array($this, 'build'));
 			
 			if($this->_scriptExecutionTime)
 			{
-				$this->script_execution_time("end", "onAfterInitialise");
+				$this->script_execution_time('end', 'onAfterInitialise');
 			}
 			
 		}
@@ -451,7 +454,7 @@ class PlgSystemSefwizard extends JPlugin
 		$val_language = $dbo->quote($this->_language);
 		$val_all = $dbo->quote('*');
 		$extensions = array();
-		$subquery = "";
+		$subquery = '';
 		
 		if($this->_options['com_content'])
 		{
@@ -550,7 +553,7 @@ class PlgSystemSefwizard extends JPlugin
 						{
 							if($contentItem->parent_id == $menuItem->query['id'])
 							{
-								return $contentItem->id . "-" . $this->_alias;
+								return $contentItem->id . '-' . $this->_alias;
 							}
 						}
 					}
@@ -562,14 +565,14 @@ class PlgSystemSefwizard extends JPlugin
 					{
 						if($contentItem->element == $menuItem->component)
 						{
-							return $contentItem->id . "-" . $this->_alias;
+							return $contentItem->id . '-' . $this->_alias;
 						}
 					}
 				}
 			}
 			else
 			{
-				return array_shift($contentItems)->id . "-" . $this->_alias;
+				return array_shift($contentItems)->id . '-' . $this->_alias;
 			}
 		}
 	}
@@ -708,15 +711,15 @@ class PlgSystemSefwizard extends JPlugin
 													" WHERE $t1.$name_id = " . (int) $category->catid
 									);
 									
-									if($descendants = $dbo->loadRow())
+									if($ancestors = $dbo->loadRow())
 									{
-										foreach($descendants as $key => $descendant)
+										foreach($ancestors as $key => $ancestor)
 										{
-											array_unshift($category->ancestorChain, $descendant);
+											array_unshift($category->ancestorChain, $ancestor);
 										}
 									}
 									
-									if(!$descendants || count($category->ancestorChain) !== $level - 2)
+									if(!$ancestors || count($category->ancestorChain) !== $level - 2)
 									{
 										return null;
 									}
@@ -819,8 +822,8 @@ class PlgSystemSefwizard extends JPlugin
 		{
 			$query = $uri->getQuery(true);
 			
-			if(isset($query["option"], $query["id"]) && 
-				in_array($query["option"], $this->_options) && !is_array($query["id"]))
+			if(isset($query['option'], $query['id']) && 
+				in_array($query['option'], $this->_options) && !is_array($query['id']))
 			{	
 				$router = clone $siteRouter;
 				$url = $router->build($uri);
@@ -855,9 +858,9 @@ class PlgSystemSefwizard extends JPlugin
 					
 					$offset = 0;
 		
-					if(isset($query["Itemid"]))
+					if(isset($query['Itemid']))
 					{
-						$menuitem = $this->_menu->getItem($query["Itemid"]);
+						$menuitem = $this->_menu->getItem($query['Itemid']);
 						
 						if(!$menuitem->home)
 						{
@@ -868,28 +871,28 @@ class PlgSystemSefwizard extends JPlugin
 					
 					if($offset < strlen($path))
 					{
-						if(in_array($query["option"], array('com_contact', 'com_tags')))
+						if(in_array($query['option'], array('com_contact', 'com_tags')))
 						{
-							$path = preg_replace("#(?<=.{" . $offset . "})/\d+-#", "/", $path);
+							$path = preg_replace('#(?<=.{' . $offset . '})/\d+-#', '/', $path);
 						}
 						else
 						{
-							$id = $this->getID_fragment($query["id"]);
+							$id = $this->getID_fragment($query['id']);
 							
-							if($query["view"] === 'article')
+							if($query['view'] === 'article')
 							{
-								$ending = "";
+								$ending = '';
 								$pos = strrpos($path, $id, $offset);
 								
 								if($pos !== false)
 								{
 									$ending = substr($path, $pos + strlen($id));
-									$path = substr_replace($path, "/", $pos);
+									$path = substr_replace($path, '/', $pos);
 								}
 								
-								if(isset($query["catid"]) && $offset < strlen($path) - 1)
+								if(isset($query['catid']) && $offset < strlen($path) - 1)
 								{
-									$catid = $this->getID_fragment($query["catid"]);
+									$catid = $this->getID_fragment($query['catid']);
 									$path = $this->remove_catID($path, $catid, $query, $offset);
 								}
 								
@@ -911,7 +914,10 @@ class PlgSystemSefwizard extends JPlugin
 				}
 			}
 			
-			// 
+			if($this->_showRouterVariables)
+			{
+				$this->_uri[] = array($uri, $query);
+			}
 			
 		}
 		
@@ -931,7 +937,7 @@ class PlgSystemSefwizard extends JPlugin
 		
 		if($pos !== false)
 		{
-			$path = substr_replace($path, "/", $pos, strlen($catid));
+			$path = substr_replace($path, '/', $pos, strlen($catid));
 		}
 		
 		return $path;
@@ -946,18 +952,18 @@ class PlgSystemSefwizard extends JPlugin
 		if($this->_execute && $duplicate_handling)
 		{	
 			$app = JFactory::getApplication();
-			$option = $app->input->get("option");
+			$option = $app->input->get('option');
 			
 			if(in_array($option, $this->_options) && 
-				($option !== "com_content" || $app->input->get("view") !== "archive"))
+				($option !== 'com_content' || $app->input->get('view') !== 'archive'))
 			{
 				$vars = $this->_router->getVars();				
-				$url_parts = explode("?", JRoute::_('index.php?' . http_build_query($vars), false), 2);
+				$url_parts = explode('?', JRoute::_('index.php?' . http_build_query($vars), false), 2);
 				$path = $url_parts[0];
 				
 				if($this->_scriptExecutionTime)
 				{
-					$this->script_execution_time("start");
+					$this->script_execution_time('start');
 				}
 				
 				$uri = JURI::getInstance();
@@ -968,7 +974,7 @@ class PlgSystemSefwizard extends JPlugin
 					stripos($path, "$root/component") !== 0)
 				{
 					if($duplicate_handling == 1 && 
-						(empty($url_parts[1]) || !preg_match("#\b(?:cat|Item)?id=#i", $url_parts[1])))
+						(empty($url_parts[1]) || !preg_match('#\b(?:cat|Item)?id=#i', $url_parts[1])))
 					{
 						if($query_string = $uri->getQuery())
 						{
@@ -978,13 +984,13 @@ class PlgSystemSefwizard extends JPlugin
 					}
 					else
 					{
-						throw new Exception("Not found", 404);
+						throw new Exception('Not found', 404);
 					}
 				}
 				
 				if($this->_scriptExecutionTime)
 				{
-					$this->script_execution_time("end", "onAfterRoute");
+					$this->script_execution_time('end', 'onAfterRoute');
 				}
 				
 			}
@@ -994,32 +1000,61 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PUBLIC FUNCTION onAfterRender()
 	{
-		if($this->_execute && $this->_scriptExecutionTime)
+		if($this->_execute && ($this->_scriptExecutionTime || $this->_showRouterVariables))
 		{
-			$this->script_execution_time("start");
+			if($this->_scriptExecutionTime)
+			{
+				$this->script_execution_time('start');
+			}
+			
 			$html = $this->getBody();
-			$html = $this->script_execution_time("end", "onAfterRender", $html);
+			
+			if($this->_showRouterVariables)
+			{
+				$html = $this->add_router_variables($html);
+			}
+			
+			if($this->_scriptExecutionTime)
+			{
+				$html = $this->script_execution_time('end', 'onAfterRender', $html);
+			}
+			
 			$this->setBody($html);
 		}
 	}
 	
 	
-	PRIVATE FUNCTION strend($haystack, $needle)
+	PRIVATE FUNCTION strendmatch($haystack, $needle)
 	{
 		$offset = strlen($haystack) - strlen($needle);	
 		return $offset >= 0 && strpos($haystack, $needle, $offset) !== false;
 	}
 	
 	
-	PRIVATE FUNCTION script_execution_time($timestamp, $caller = "", $html = null)
+	PRIVATE FUNCTION add_router_variables($html)
+	{
+		$notice = '';
+		
+		foreach($this->_uri as $uri)
+		{
+			$uri = array('url' => $uri[0]->toString(), 'vars' => $uri[1]);
+			$notice .= '<pre style="margin: 15px">' . print_r($uri, true) . '</pre>';
+		}
+		
+		return preg_replace('#<body[^>]*>#', '$0' . '<div><p style="font-size: 22px; font-weight: bold; margin: 15px">Router variables</p>' . $notice . '</div>', $html);
+
+	}
+	
+	
+	PRIVATE FUNCTION script_execution_time($timestamp, $caller = '', $html = null)
 	{	
 		static $start, $result = array(), $format = 5;
 		
-		if($timestamp === "start")
+		if($timestamp === 'start')
 		{
 			$start = microtime(true);
 		}
-		elseif($timestamp === "end")
+		elseif($timestamp === 'end')
 		{
 			$result[$caller] = number_format((microtime(true) - $start), $format);
 		}
@@ -1030,13 +1065,13 @@ class PlgSystemSefwizard extends JPlugin
 			
 			if($this->_scriptExecutionTime == 1)
 			{
-				$notice = "\\n SEF WIZARD PLUGIN (PHP SCRIPT EXECUTION TIME):";
+				$notice = '\\n SEF WIZARD PLUGIN (PHP SCRIPT EXECUTION TIME):';
 				foreach($result as $name => $time)
 				{
 					$notice .= "\\n $name: $time sec.";
 				}	
 				$notice .= "\\n Total execution time: {$total} sec.";
-				return preg_replace("#(</head>)#", "<script>if('console' in window && console.log) console.log('$notice')</script> $1", $html);
+				return preg_replace('#(</head>)#', "<script>if('console' in window && console.log) console.log('$notice')</script> $1", $html);
 			}
 			else
 			{
@@ -1046,7 +1081,7 @@ class PlgSystemSefwizard extends JPlugin
 					$notice .= "<br>$name: $time sec.";
 				}	
 				$notice .= "<br>total execution time: <b>{$total} sec.</b></div>";
-				return preg_replace("#<body[^>]*>#", "$0{$notice}", $html);
+				return preg_replace('#<body[^>]*>#', "$0{$notice}", $html);
 			}
 		}
 		
@@ -1055,13 +1090,13 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PRIVATE FUNCTION getBody()
 	{
-		return !$this->_JLegacy ? JFactory::getApplication->getBody() : JResponse::getBody();
+		return !$this->_JLegacy ? JFactory::getApplication()->getBody() : JResponse::getBody();
 	}
 	
 	
 	PRIVATE FUNCTION setBody($html)
 	{
-		!$this->_JLegacy ? JFactory::getApplication->setBody($html) : JResponse::setBody($html);
+		!$this->_JLegacy ? JFactory::getApplication()->setBody($html) : JResponse::setBody($html);
 	}
 	
 
