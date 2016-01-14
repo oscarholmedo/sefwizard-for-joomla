@@ -18,20 +18,21 @@ class PlgSystemSefwizard extends JPlugin
 {
 	PRIVATE
 		$_JLegacy = false,
-		$_sef = "",
-		$_router = null,
+		$_execute = false,
+		$_scriptExecutionTime = false,
+		$_showRouterVariables = false,
 		$_sefRewrite = false,
 		$_sefSuffix = false,
+		$_rootlen = 0,
+		$_sef = "",
+		$_router = null,
 		$_options = array(),
-		$_debug = false,
-		$_execute = false,
 		$_language = '',
 		$_menu = null,
-		$_rootlen = 0,
 		$_alias = '',
 		$_menuItemCandidates = array(),
 		$_homePageCandidates = array();
-		
+	
 	
 	PUBLIC FUNCTION onAfterInitialise()
 	{
@@ -57,7 +58,7 @@ class PlgSystemSefwizard extends JPlugin
 			$this->_sefRewrite = $config->get('sef_rewrite');
 			$this->_menu = $app->getMenu();
 			
-			if($this->_debug = $this->params->get("debug"))
+			if($this->_scriptExecutionTime = $this->params->get("scriptExecutionTime"))
 			{
 				$this->script_execution_time("start");
 			}
@@ -363,11 +364,11 @@ class PlgSystemSefwizard extends JPlugin
 										{
 											$item->ancestorChain = array();
 											
-											if($this->strend($item->path, $primaryLevelCategoryFragment))
+											if($this->strendmatch($item->path, $primaryLevelCategoryFragment))
 											{
 												$primaryLevelCategories[] = $item;
 											}
-											if($this->strend($item->path, $secondaryLevelCategoryFragment))
+											if($this->strendmatch($item->path, $secondaryLevelCategoryFragment))
 											{
 												$secondaryLevelCategories[] = $item;
 											}
@@ -412,7 +413,7 @@ class PlgSystemSefwizard extends JPlugin
 			
 			$this->_router->attachBuildRule(array($this, "build"));
 			
-			if($this->_debug)
+			if($this->_scriptExecutionTime)
 			{
 				$this->script_execution_time("end", "onAfterInitialise");
 			}
@@ -766,7 +767,7 @@ class PlgSystemSefwizard extends JPlugin
 					
 					foreach($categories as $category)
 					{
-						if($this->strend($category->path, $categoryFragment))
+						if($this->strendmatch($category->path, $categoryFragment))
 						{
 							$filtered[] = $category;
 						}
@@ -909,6 +910,9 @@ class PlgSystemSefwizard extends JPlugin
 					}
 				}
 			}
+			
+			// 
+			
 		}
 		
 		return array();
@@ -951,7 +955,7 @@ class PlgSystemSefwizard extends JPlugin
 				$url_parts = explode("?", JRoute::_('index.php?' . http_build_query($vars), false), 2);
 				$path = $url_parts[0];
 				
-				if($this->_debug)
+				if($this->_scriptExecutionTime)
 				{
 					$this->script_execution_time("start");
 				}
@@ -978,7 +982,7 @@ class PlgSystemSefwizard extends JPlugin
 					}
 				}
 				
-				if($this->_debug)
+				if($this->_scriptExecutionTime)
 				{
 					$this->script_execution_time("end", "onAfterRoute");
 				}
@@ -990,16 +994,12 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PUBLIC FUNCTION onAfterRender()
 	{
-		if($this->_execute && $this->_debug)
+		if($this->_execute && $this->_scriptExecutionTime)
 		{
 			$this->script_execution_time("start");
-			
-			$app = JFactory::getApplication();
-			
-			$html = !$this->_JLegacy ? $app->getBody() : JResponse::getBody();
+			$html = $this->getBody();
 			$html = $this->script_execution_time("end", "onAfterRender", $html);
-			
-			!$this->_JLegacy ? $app->setBody($html) : JResponse::setBody($html);
+			$this->setBody($html);
 		}
 	}
 	
@@ -1028,7 +1028,7 @@ class PlgSystemSefwizard extends JPlugin
 		{
 			$total = number_format((array_sum($result)), $format);
 			
-			if($this->_debug == 1)
+			if($this->_scriptExecutionTime == 1)
 			{
 				$notice = "\\n SEF WIZARD PLUGIN (PHP SCRIPT EXECUTION TIME):";
 				foreach($result as $name => $time)
@@ -1051,5 +1051,18 @@ class PlgSystemSefwizard extends JPlugin
 		}
 		
 	}
+	
+	
+	PRIVATE FUNCTION getBody()
+	{
+		return !$this->_JLegacy ? JFactory::getApplication->getBody() : JResponse::getBody();
+	}
+	
+	
+	PRIVATE FUNCTION setBody($html)
+	{
+		!$this->_JLegacy ? JFactory::getApplication->setBody($html) : JResponse::setBody($html);
+	}
+	
 
 }
