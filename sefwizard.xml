@@ -78,7 +78,7 @@
 					description="PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_DESCRIPTION" 
 					default="0" 
 					>
-					<option value="0">PLG_SEFWIZARD_DISABLED</option>
+					<option value="0">PLG_SEFWIZARD_DEBUG_DISABLED</option>
 					<option value="1">PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_CONSOLE</option>
 					<option value="2">PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_PAGE</option>
 				</field>
@@ -89,7 +89,7 @@
 					description="PLG_SEFWIZARD_SHOW_ROUTER_VARIABLES_DESCRIPTION" 
 					default="0" 
 					>
-					<option value="0">PLG_SEFWIZARD_DISABLED</option>
+					<option value="0">PLG_SEFWIZARD_DEBUG_DISABLED</option>
 					<option value="1">PLG_SEFWIZARD_ENABLED</option>
 				</field>
 			</fieldset>
