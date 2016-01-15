@@ -28,8 +28,10 @@ class JFormFieldAddhelper extends JFormField
 		$ppImg = JURI::root(true) . "/plugins/system/sefwizard/assets/ppbtn_donate.jpg";
 		
 		$doc->addStyleDeclaration("
-			#general .add-spacer {
+			#general .add-spacer, #general .add-spacer label {
 				text-transform: uppercase !important;
+				font-weight: bold !important;
+				cursor: default !important;
 			}
 			#attrib-donate .control-group .controls {
 				margin: 0 !important;
