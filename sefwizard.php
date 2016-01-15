@@ -1030,10 +1030,10 @@ class PlgSystemSefwizard extends JPlugin
 		foreach($this->_uri as $uri)
 		{
 			$uri = array('url' => $uri[0]->toString(), 'vars' => $uri[1]);
-			$notice .= '<pre style="margin: 15px">' . print_r($uri, true) . '</pre>';
+			$notice .= '<pre style="margin: 15px; text-align: left">' . print_r($uri, true) . '</pre>';
 		}
 		
-		return preg_replace('#<body[^>]*>#', '$0' . '<div><p style="font-size: 22px; font-weight: bold; margin: 15px">Router variables</p>' . $notice . '</div>', $html);
+		return preg_replace('#<body[^>]*>#', '$0' . '<div><p style="font-size: 22px; font-weight: bold; margin: 15px; text-align: left">Router variables</p>' . $notice . '</div>', $html);
 
 	}
 	
@@ -1067,7 +1067,7 @@ class PlgSystemSefwizard extends JPlugin
 			}
 			else
 			{
-				$notice = "<div><p style='margin: 15px'>SEF WIZARD PLUGIN (PHP SCRIPT EXECUTION TIME):";
+				$notice = "<div><p style='margin: 15px; text-align: left'>SEF WIZARD PLUGIN (PHP SCRIPT EXECUTION TIME):";
 				foreach($result as $name => $time)
 				{
 					$notice .= "<br>$name: $time sec.";

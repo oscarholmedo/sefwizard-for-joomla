@@ -28,7 +28,7 @@ class JFormFieldAddhelper extends JFormField
 		$ppImg = JURI::root(true) . "/plugins/system/sefwizard/assets/ppbtn_donate.jpg";
 		
 		$doc->addStyleDeclaration("
-			#general .add-spacer, #general .add-spacer label {
+			.add-spacer, .add-spacer label {
 				text-transform: uppercase !important;
 				font-weight: bold !important;
 				cursor: default !important;
@@ -42,6 +42,10 @@ class JFormFieldAddhelper extends JFormField
 			}
 			li a[href='#attrib-donate'], #donate-options a {
 				color: red !important;
+			}
+			hr {
+				clear: both;
+				float: none;
 			}
 		");
 		
