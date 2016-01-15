@@ -33,8 +33,12 @@ class JFormFieldAddhelper extends JFormField
 				font-weight: bold !important;
 				cursor: default !important;
 			}
-			#attrib-donate .control-group .controls {
+			#attrib-donate .control-group .controls,
+			#general .control-group:last-child .controls {
 				margin: 0 !important;
+			}
+			#general .control-group:last-child .control-label {
+				display: none !important;
 			}
 			li a[href='#attrib-donate'], #donate-options a {
 				color: red !important;

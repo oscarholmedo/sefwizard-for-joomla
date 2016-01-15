@@ -25,7 +25,7 @@
 		<language tag="ru-RU">ru-RU/ru-RU.plg_system_sefwizard.sys.ini</language>
 	</languages>
 	<config>
-		<fields name="params">
+		<fields name="params" addfieldpath="/plugins/system/sefwizard/fields/">
 			<fieldset name="basic">
 				<field type="spacer" class="add-spacer" name="components" label="PLG_SEFWIZARD_INVOLVED_COMPONENTS" />
 				<field 
@@ -92,8 +92,9 @@
 					<option value="0">PLG_SEFWIZARD_DEBUG_DISABLED</option>
 					<option value="1">PLG_SEFWIZARD_SHOW_ROUTER_VARIABLES_PAGE</option>
 				</field>
+				<field type="addfootnote" />
 			</fieldset>
-			<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT" addfieldpath="/plugins/system/sefwizard/fields/">
+			<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT">
 				<field type="addhelper" />
 			</fieldset>
 		</fields>
