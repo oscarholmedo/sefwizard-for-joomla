@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension type="plugin" version="3.4.8" group="system" method="upgrade">
 	<name>SEF Wizard</name>
-	<version>1.1.1</version>
+	<version>1.1.2</version>
 	<creationDate>2016-01-01</creationDate>
 	<license>http://www.gnu.org/licenses/gpl-2.0.html</license>
 	<copyright>Copyright 2016 Philip Sorokin. All rights reserved.</copyright>
@@ -25,7 +25,7 @@
 		<language tag="ru-RU">ru-RU/ru-RU.plg_system_sefwizard.sys.ini</language>
 	</languages>
 	<config>
-		<fields name="params">
+		<fields name="params" addfieldpath="/plugins/system/sefwizard/fields/">
 			<fieldset name="basic">
 				<field type="spacer" class="add-spacer" name="components" label="PLG_SEFWIZARD_INVOLVED_COMPONENTS" />
 				<field 
@@ -78,7 +78,7 @@
 					description="PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_DESCRIPTION" 
 					default="0" 
 					>
-					<option value="0">PLG_SEFWIZARD_DISABLED</option>
+					<option value="0">PLG_SEFWIZARD_DEBUG_DISABLED</option>
 					<option value="1">PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_CONSOLE</option>
 					<option value="2">PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_PAGE</option>
 				</field>
@@ -89,11 +89,12 @@
 					description="PLG_SEFWIZARD_SHOW_ROUTER_VARIABLES_DESCRIPTION" 
 					default="0" 
 					>
-					<option value="0">PLG_SEFWIZARD_DISABLED</option>
-					<option value="1">PLG_SEFWIZARD_ENABLED</option>
+					<option value="0">PLG_SEFWIZARD_DEBUG_DISABLED</option>
+					<option value="1">PLG_SEFWIZARD_SHOW_ROUTER_VARIABLES_PAGE</option>
 				</field>
+				<field type="addfootnote" />
 			</fieldset>
-			<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT" addfieldpath="/plugins/system/sefwizard/fields/">
+			<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT">
 				<field type="addhelper" />
 			</fieldset>
 		</fields>
