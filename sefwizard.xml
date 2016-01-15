@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <extension type="plugin" version="3.4.8" group="system" method="upgrade">
 	<name>SEF Wizard</name>
-	<version>1.1</version>
+	<version>1.1.1</version>
 	<creationDate>2016-01-01</creationDate>
 	<license>http://www.gnu.org/licenses/gpl-2.0.html</license>
 	<copyright>Copyright 2016 Philip Sorokin. All rights reserved.</copyright>
@@ -70,22 +70,33 @@
 					<option value="1">PLG_SEFWIZARD_DUPLICATE_HANDLING_REDIRECT</option>
 					<option value="2">PLG_SEFWIZARD_DUPLICATE_HANDLING_ERROR</option>
 				</field>
+				<field type="spacer" class="add-spacer" name="debug" label="PLG_SEFWIZARD_DEBUG" />
 				<field 
-					name="debug" 
+					name="script_execution_time" 
 					type="list" 
-					label="PLG_SEFWIZARD_DEBUG_LABEL" 
-					description="PLG_SEFWIZARD_DEBUG_DESCRIPTION" 
+					label="PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_LABEL" 
+					description="PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_DESCRIPTION" 
 					default="0" 
 					>
 					<option value="0">PLG_SEFWIZARD_DISABLED</option>
-					<option value="1">PLG_SEFWIZARD_DEBUG_CONSOLE</option>
-					<option value="2">PLG_SEFWIZARD_DEBUG_PAGE</option>
+					<option value="1">PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_CONSOLE</option>
+					<option value="2">PLG_SEFWIZARD_SCRIPT_EXECUTION_TIME_PAGE</option>
+				</field>
+				<field 
+					name="show_router_variables" 
+					type="list" 
+					label="PLG_SEFWIZARD_SHOW_ROUTER_VARIABLES_LABEL" 
+					description="PLG_SEFWIZARD_SHOW_ROUTER_VARIABLES_DESCRIPTION" 
+					default="0" 
+					>
+					<option value="0">PLG_SEFWIZARD_DISABLED</option>
+					<option value="1">PLG_SEFWIZARD_ENABLED</option>
 				</field>
 			</fieldset>
+			<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT" addfieldpath="/plugins/system/sefwizard/fields/">
+				<field type="addhelper" />
+			</fieldset>
 		</fields>
-		<fieldset name="donate" label="PLG_SEFWIZARD_DONATE" description="PLG_SEFWIZARD_DONATE_TEXT" addfieldpath="/plugins/system/sefwizard/fields/">
-			<field type="addhelper" />
-		</fieldset>
 	</config>
 	<updateservers>
 		<server type="extension" priority="1" name="SEF Wizard update server">http://addondev.com/support/updates/sefwizard.xml</server>
