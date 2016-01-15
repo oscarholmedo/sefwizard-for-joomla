@@ -1,6 +1,6 @@
 <?php
 
-/* SEF Wizard extension for Joomla 3.x/2.5.x - Version 1.1.1
+/* SEF Wizard extension for Joomla 3.x/2.5.x - Version 1.1.2
 --------------------------------------------------------------
  Copyright (C) 2015 AddonDev. All rights reserved.
  Website: www.addondev.com
@@ -976,7 +976,7 @@ class PlgSystemSefwizard extends JPlugin
 					}
 					else
 					{
-						throw new Exception('Not found', 404);
+						$this->raiseError('Not found', 404);
 					}
 				}
 				
@@ -1082,13 +1082,15 @@ class PlgSystemSefwizard extends JPlugin
 	
 	PRIVATE FUNCTION getBody()
 	{
-		return !$this->_JLegacy ? JFactory::getApplication()->getBody() : JResponse::getBody();
+		$app = JFactory::getApplication();
+		return method_exists($app, 'getBody') ? $app->getBody() : JResponse::getBody();
 	}
 	
 	
 	PRIVATE FUNCTION setBody($html)
 	{
-		!$this->_JLegacy ? JFactory::getApplication()->setBody($html) : JResponse::setBody($html);
+		$app = JFactory::getApplication();
+		method_exists($app, 'setBody') ? $app->setBody($html) : JResponse::setBody($html);
 	}
 	
 	
@@ -1096,6 +1098,19 @@ class PlgSystemSefwizard extends JPlugin
 	{
 		$app = JFactory::getApplication();
 		!$this->_JLegacy ? $app->redirect($url, true) : $app->redirect($url, null, null, true);
+	}
+	
+	
+	PRIVATE FUNCTION raiseError($message, $code)
+	{
+		if(JError::$legacy)
+		{
+			JError::raiseError($code, $message);
+		}
+		else
+		{
+			throw new Exception($message, $code);
+		}
 	}
 	
 
