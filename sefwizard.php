@@ -972,7 +972,7 @@ class PlgSystemSefwizard extends JPlugin
 						{
 							$canonical .= '?' . $query_string;
 						}
-						$app->redirect($canonical, true);
+						$this->redirectPermanent($canonical);
 					}
 					else
 					{
@@ -1089,6 +1089,13 @@ class PlgSystemSefwizard extends JPlugin
 	PRIVATE FUNCTION setBody($html)
 	{
 		!$this->_JLegacy ? JFactory::getApplication()->setBody($html) : JResponse::setBody($html);
+	}
+	
+	
+	PRIVATE FUNCTION redirectPermanent($url)
+	{
+		$app = JFactory::getApplication();
+		!$this->_JLegacy ? $app->redirect($url, true) : $app->redirect($url, null, null, true);
 	}
 	
 
