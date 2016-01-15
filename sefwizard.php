@@ -972,7 +972,7 @@ class PlgSystemSefwizard extends JPlugin
 						{
 							$canonical .= '?' . $query_string;
 						}
-						$app->redirect($canonical, 301);
+						$app->redirect($canonical, true);
 					}
 					else
 					{
