@@ -183,7 +183,7 @@ class PlgSystemSefwizard extends JPlugin
 						{
 							if(count($homePageCandidates))
 							{
-								$this->_sef = $this->getPrimaryLevelSef($homePageCandidates);
+								$this->_sef = $this->getPrimaryLevelSef($alias, $langTAG, $homePageCandidates);
 							}
 						}
 						else
