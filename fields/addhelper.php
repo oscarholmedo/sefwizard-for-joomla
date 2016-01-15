@@ -21,7 +21,7 @@ class JFormFieldAddhelper extends JFormField
 	protected function getInput()
 	{
 		$doc = JFactory::getDocument();
-		$language = JFactory::getLanguage()->getName() === "Russian";
+		$language = JFactory::getLanguage()->getName();
 		
 		$donatePPID = $language === "Russian" ? "D6CR8WY5NAWHS" : "5CNAKEVMSUT3Q";
 		$donatePPURL = "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id={$donatePPID}";
@@ -54,8 +54,10 @@ class JFormFieldAddhelper extends JFormField
 		{
 			$donateYMURL = "https://addondev.com/ru/?page=donate";
 			$ymImg = JURI::root(true) . "/plugins/system/sefwizard/assets/ymbtn_donate.png";
+			$vmcImg = JURI::root(true) . "/plugins/system/sefwizard/assets/vmcbtn_donate.jpg";
 			
-			$html .= "<a href='{$donateYMURL}' target='_blank'><img style='margin:-10px 0 0 10px' src='{$ymImg}' alt='' width='127' height='40' /></a>";
+			$html .= "<a href='{$donateYMURL}' target='_blank'><img style='margin-left: 10px' src='{$ymImg}' alt='' width='127' height='40' /></a>";
+			$html .= "<a href='{$donateYMURL}' target='_blank'><img src='{$vmcImg}' alt='' width='120' height='40' /></a>";
 		}
 		
 		
